@@ -1,15 +1,78 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppProvider, ROLES, useApp } from '@/store'
 import { RoleGate, SidebarLayout, TopNavLayout } from '@/components/layouts'
 import { PageHeader, useCrumbs } from '@/components/ui'
-import { GantiSandi, LupaSandi, NotFound } from '@/pages/auth'
-import { Login } from '@/pages/login'
-import { AkunPage, JadwalPage, NotifikasiPage, PanduanPage, PengaturanPage, PengumumanDetail, PengumumanList } from '@/pages/shared'
-import { KelasDetailSiswa, KuisHasil, KuisInstruksi, KuisKerjakan, MateriPreview, NilaiKehadiran, SiswaBeranda, SiswaKelasSaya, TugasDetail, TugasKuisPage } from '@/pages/siswa'
-import { DaftarSiswaPage, GuruBeranda, GuruKelasSaya, KelasDetailGuru, KelolaMateri, KuisForm, KuisListGuru, TugasForm, TugasListPage } from '@/pages/guru1'
-import { BankSoal, KuisHasilGuru, MediaLibrary, Penilaian, PresensiList, PresensiPick, PresensiSesi, RekapNilaiKelas, RekapNilaiPick, RekapPresensi } from '@/pages/guru2'
-import { KepsekBeranda, KepsekGuru, KepsekLaporan, KepsekStatistik, WaliBeranda, WaliKelas, WaliRekapHadir, WaliRekapNilai, WaliSiswaDetail } from '@/pages/wali'
-import { DataGuru, DataJurusan, DataKelas, DataMapel, DataSiswa, JadwalEditor, KelasDetailTU, LogAktivitas, ManajemenPengguna, PengaturanSistem, PenugasanGuru, TUDashboard, TahunAjaran } from '@/pages/tu'
+import PageLoader from '@/components/PageLoader'
+
+const GantiSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.GantiSandi })))
+const LupaSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.LupaSandi })))
+const NotFound = lazy(() => import('@/pages/auth').then(m => ({ default: m.NotFound })))
+const Login = lazy(() => import('@/pages/login').then(m => ({ default: m.Login })))
+
+const AkunPage = lazy(() => import('@/pages/shared').then(m => ({ default: m.AkunPage })))
+const JadwalPage = lazy(() => import('@/pages/shared').then(m => ({ default: m.JadwalPage })))
+const NotifikasiPage = lazy(() => import('@/pages/shared').then(m => ({ default: m.NotifikasiPage })))
+const PanduanPage = lazy(() => import('@/pages/shared').then(m => ({ default: m.PanduanPage })))
+const PengaturanPage = lazy(() => import('@/pages/shared').then(m => ({ default: m.PengaturanPage })))
+const PengumumanDetail = lazy(() => import('@/pages/shared').then(m => ({ default: m.PengumumanDetail })))
+const PengumumanList = lazy(() => import('@/pages/shared').then(m => ({ default: m.PengumumanList })))
+
+const KelasDetailSiswa = lazy(() => import('@/pages/siswa').then(m => ({ default: m.KelasDetailSiswa })))
+const KuisHasil = lazy(() => import('@/pages/siswa').then(m => ({ default: m.KuisHasil })))
+const KuisInstruksi = lazy(() => import('@/pages/siswa').then(m => ({ default: m.KuisInstruksi })))
+const KuisKerjakan = lazy(() => import('@/pages/siswa').then(m => ({ default: m.KuisKerjakan })))
+const MateriPreview = lazy(() => import('@/pages/siswa').then(m => ({ default: m.MateriPreview })))
+const NilaiKehadiran = lazy(() => import('@/pages/siswa').then(m => ({ default: m.NilaiKehadiran })))
+const SiswaBeranda = lazy(() => import('@/pages/siswa').then(m => ({ default: m.SiswaBeranda })))
+const SiswaKelasSaya = lazy(() => import('@/pages/siswa').then(m => ({ default: m.SiswaKelasSaya })))
+const TugasDetail = lazy(() => import('@/pages/siswa').then(m => ({ default: m.TugasDetail })))
+const TugasKuisPage = lazy(() => import('@/pages/siswa').then(m => ({ default: m.TugasKuisPage })))
+
+const DaftarSiswaPage = lazy(() => import('@/pages/guru1').then(m => ({ default: m.DaftarSiswaPage })))
+const GuruBeranda = lazy(() => import('@/pages/guru1').then(m => ({ default: m.GuruBeranda })))
+const GuruKelasSaya = lazy(() => import('@/pages/guru1').then(m => ({ default: m.GuruKelasSaya })))
+const KelasDetailGuru = lazy(() => import('@/pages/guru1').then(m => ({ default: m.KelasDetailGuru })))
+const KelolaMateri = lazy(() => import('@/pages/guru1').then(m => ({ default: m.KelolaMateri })))
+const KuisForm = lazy(() => import('@/pages/guru1').then(m => ({ default: m.KuisForm })))
+const KuisListGuru = lazy(() => import('@/pages/guru1').then(m => ({ default: m.KuisListGuru })))
+const TugasForm = lazy(() => import('@/pages/guru1').then(m => ({ default: m.TugasForm })))
+const TugasListPage = lazy(() => import('@/pages/guru1').then(m => ({ default: m.TugasListPage })))
+
+const BankSoal = lazy(() => import('@/pages/guru2').then(m => ({ default: m.BankSoal })))
+const KuisHasilGuru = lazy(() => import('@/pages/guru2').then(m => ({ default: m.KuisHasilGuru })))
+const MediaLibrary = lazy(() => import('@/pages/guru2').then(m => ({ default: m.MediaLibrary })))
+const Penilaian = lazy(() => import('@/pages/guru2').then(m => ({ default: m.Penilaian })))
+const PresensiList = lazy(() => import('@/pages/guru2').then(m => ({ default: m.PresensiList })))
+const PresensiPick = lazy(() => import('@/pages/guru2').then(m => ({ default: m.PresensiPick })))
+const PresensiSesi = lazy(() => import('@/pages/guru2').then(m => ({ default: m.PresensiSesi })))
+const RekapNilaiKelas = lazy(() => import('@/pages/guru2').then(m => ({ default: m.RekapNilaiKelas })))
+const RekapNilaiPick = lazy(() => import('@/pages/guru2').then(m => ({ default: m.RekapNilaiPick })))
+const RekapPresensi = lazy(() => import('@/pages/guru2').then(m => ({ default: m.RekapPresensi })))
+
+const KepsekBeranda = lazy(() => import('@/pages/wali').then(m => ({ default: m.KepsekBeranda })))
+const KepsekGuru = lazy(() => import('@/pages/wali').then(m => ({ default: m.KepsekGuru })))
+const KepsekLaporan = lazy(() => import('@/pages/wali').then(m => ({ default: m.KepsekLaporan })))
+const KepsekStatistik = lazy(() => import('@/pages/wali').then(m => ({ default: m.KepsekStatistik })))
+const WaliBeranda = lazy(() => import('@/pages/wali').then(m => ({ default: m.WaliBeranda })))
+const WaliKelas = lazy(() => import('@/pages/wali').then(m => ({ default: m.WaliKelas })))
+const WaliRekapHadir = lazy(() => import('@/pages/wali').then(m => ({ default: m.WaliRekapHadir })))
+const WaliRekapNilai = lazy(() => import('@/pages/wali').then(m => ({ default: m.WaliRekapNilai })))
+const WaliSiswaDetail = lazy(() => import('@/pages/wali').then(m => ({ default: m.WaliSiswaDetail })))
+
+const DataGuru = lazy(() => import('@/pages/tu').then(m => ({ default: m.DataGuru })))
+const DataJurusan = lazy(() => import('@/pages/tu').then(m => ({ default: m.DataJurusan })))
+const DataKelas = lazy(() => import('@/pages/tu').then(m => ({ default: m.DataKelas })))
+const DataMapel = lazy(() => import('@/pages/tu').then(m => ({ default: m.DataMapel })))
+const DataSiswa = lazy(() => import('@/pages/tu').then(m => ({ default: m.DataSiswa })))
+const JadwalEditor = lazy(() => import('@/pages/tu').then(m => ({ default: m.JadwalEditor })))
+const KelasDetailTU = lazy(() => import('@/pages/tu').then(m => ({ default: m.KelasDetailTU })))
+const LogAktivitas = lazy(() => import('@/pages/tu').then(m => ({ default: m.LogAktivitas })))
+const ManajemenPengguna = lazy(() => import('@/pages/tu').then(m => ({ default: m.ManajemenPengguna })))
+const PengaturanSistem = lazy(() => import('@/pages/tu').then(m => ({ default: m.PengaturanSistem })))
+const PenugasanGuru = lazy(() => import('@/pages/tu').then(m => ({ default: m.PenugasanGuru })))
+const TUDashboard = lazy(() => import('@/pages/tu').then(m => ({ default: m.TUDashboard })))
+const TahunAjaran = lazy(() => import('@/pages/tu').then(m => ({ default: m.TahunAjaran })))
 
 const common = [<Route key="n" path="notifikasi" element={<NotifikasiPage />} />, <Route key="a" path="akun" element={<AkunPage />} />, <Route key="g" path="panduan" element={<PanduanPage />} />]
 const pengaturan = <Route path="pengaturan" element={<PengaturanPage />} />
@@ -21,7 +84,8 @@ export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AppProvider>
-        <Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/lupa-sandi" element={<LupaSandi />} />
@@ -118,6 +182,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </AppProvider>
     </BrowserRouter>
   )
