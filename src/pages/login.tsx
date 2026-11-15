@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/layouts';
-import { ROLES, useApp, type Role } from '@/store';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient('https://phtqlmidfaocacphblej.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjI0NTksImV4cCI6MjEwNjQzODQ1OX0.8mlV5OrWgBJUWEzejGQHnVxsZqidwPwkq-tH3w_WNtg');
+import { ROLES, useApp, type Role, supabase } from '@/store';
 
 export function Login() {
   const { login } = useApp();
@@ -17,7 +14,7 @@ export function Login() {
       if (session) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
         const r = (profile?.role?.toLowerCase() || 'siswa') as Role;
-        login(r);
+        login(r, null);
         nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
       }
     };
@@ -71,7 +68,7 @@ export function Login() {
         'siswa';
 
       setIsLoading(false);
-      login(r);
+      login(r, null);
       nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
     } catch (err: any) {
       setError(err.message);
@@ -158,38 +155,38 @@ export function Login() {
 
               {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">{error}</div>}
 
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">Alamat Email / NISN / NIP</label>
+              <form onSubmit={onSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Email atau NISN/NIP</label>
                   <div className="relative">
-                    <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" autoComplete="username" placeholder="nama@sekolah.sch.id atau NISN" className="w-full pl-10 pr-3.5 py-2.5 bg-white rounded-xl outline outline-1 outline-slate-200 focus:outline-[#0B3D5F] text-sm" />
+                    <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" autoComplete="username" placeholder="Masukkan ID pengguna" className="w-full pl-11 pr-4 py-3 bg-white rounded-lg border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition outline-none text-sm" />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-semibold text-slate-700">Kata Sandi</label>
-                    <Link to="/lupa-sandi" className="text-xs font-semibold text-[#0B3D5F] hover:underline">Lupa kata sandi?</Link>
+                    <label className="text-sm font-medium text-slate-700">Kata Sandi</label>
+                    <Link to="/lupa-sandi" className="text-sm font-medium text-blue-700 hover:text-blue-800">Lupa sandi?</Link>
                   </div>
                   <div className="relative">
-                    <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       value={password} 
                       onChange={(e) => setPassword(e.target.value)} 
                       type={showPassword ? 'text' : 'password'} 
                       autoComplete="current-password"
-                      placeholder="••••••••••••" 
-                      className="w-full pl-10 pr-10 py-2.5 bg-white rounded-xl outline outline-1 outline-slate-200 focus:outline-[#0B3D5F] text-sm" 
+                      placeholder="••••••••" 
+                      className="w-full pl-11 pr-11 py-3 bg-white rounded-lg border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition outline-none text-sm" 
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-3 bg-[#0B3D5F] hover:bg-[#0E86C7] text-white rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm font-semibold transition disabled:opacity-50">
-                  {isLoading ? 'Memproses...' : 'Masuk'} <ArrowRight size={16} />
+                <button type="submit" disabled={isLoading} className="w-full px-4 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg shadow-sm flex items-center justify-center gap-2 text-sm font-semibold transition disabled:opacity-50">
+                  {isLoading ? 'Memproses...' : 'Masuk ke Portal'} <ArrowRight size={16} />
                 </button>
               </form>
 

@@ -5,23 +5,43 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveCo
 import { Avatar, Badge, Btn, Card, CardTitle, Chips, DataTable, Drawer, Dropzone, Empty, Field, Input, Modal, NameCell, PageHeader, Segmented, Select, Stat, StatusBadge, Tabs, Textarea, Toggle, cn, useCrumbs, useTab, download, Progress, SearchBar } from '@/components/ui'
 import { useApp } from '@/store'
 import { HARI, jamPelajaran, jurusan, jurusanNama, kalender, kelas, kelasById, logs, offerings, offeringTitle, permissions, ROLE_ORDER, students, studentsOf, subjectById, subjects, tahunAjaran, teacherById, teachers, type Offering } from '@/data'
+import { fetchUsers, fetchKelas, fetchMapel, fetchPengampu, createKelas, updateKelas, deleteKelas, createMapel, updateMapel, deleteMapel, createPengampu, updatePengampu, deletePengampu, fetchSiswaKelas, updateUserRole, createSiswa, updateSiswa, deleteUser, createGuru, updateGuru, fetchJurusan } from '@/services/akademik'
 
 type F = { k: string; l: string; type?: string; options?: (string | { v: string; l: string })[]; req?: boolean; validate?: (v: string, all: Record<string, string>) => string }
 type FD = { k: string; l: string; options: string[]; get: (r: any) => string }
-function Crud<T extends { id: string }>({ singular, title, subtitle, rows: init, cols, fields, searchText, filterDefs, detail, toForm, fromForm, importer, onRowOpen, sidebarHint }: {
+function Crud<T extends { id: string }>({ singular, title, subtitle, rows: init, cols, fields, searchText, filterDefs, detail, toForm, fromForm, importer, onRowOpen, sidebarHint, onFetch, onCreate, onUpdate, onDelete }: {
   singular: string; title: string; subtitle: string; rows: T[]; cols: any[]; fields: F[]; searchText: (r: T) => string; filterDefs?: FD[]
   detail?: (r: T) => React.ReactNode; toForm: (r: T) => Record<string, string>; fromForm: (f: Record<string, string>, old?: T) => T; importer?: boolean; onRowOpen?: (r: T) => void; sidebarHint?: string
+  onFetch?: () => Promise<T[]>; onCreate?: (data: any) => Promise<T>; onUpdate?: (id: string, data: any) => Promise<void>; onDelete?: (id: string) => Promise<void>
 }) {
   const { toast, confirm } = useApp(); const [rows, setRows] = useState(init); const [flt, setFlt] = useState<Record<string, string>>({}); const [modal, setModal] = useState<null | { edit?: T }>(null); const [view, setView] = useState<T | null>(null); const [imp, setImp] = useState(false)
-  const [f, setF] = useState<Record<string, string>>({}); const [e, setE] = useState<Record<string, string>>({}); const [busy, setBusy] = useState(false)
+  const [f, setF] = useState<Record<string, string>>({}); const [e, setE] = useState<Record<string, string>>({}); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(false)
+
+  const load = async () => { if (!onFetch) return; setLoading(true); try { setRows(await onFetch()) } catch (err: any) { toast(err.message, 'err') } finally { setLoading(false) } }
+  useEffect(() => { load() }, [])
+
   const shown = rows.filter((r) => (filterDefs ?? []).every((d) => !flt[d.k] || flt[d.k] === 'Semua' || d.get(r) === flt[d.k]))
   const open = (r?: T) => { setF(r ? toForm(r) : Object.fromEntries(fields.map((x) => [x.k, x.options ? (typeof x.options[0] === 'string' ? (x.options[0] as string) : (x.options[0] as { v: string }).v) : '']))); setE({}); setModal({ edit: r }) }
-  const save = () => { const x: Record<string, string> = {}; fields.forEach((d) => { const v = (f[d.k] ?? '').trim(); if (d.req && !v) x[d.k] = `${d.l} wajib diisi`; else if (d.validate && v) { const m = d.validate(v, f); if (m) x[d.k] = m } }); setE(x); if (Object.keys(x).length) return
-    setBusy(true); setTimeout(() => { setBusy(false); const edit = modal!.edit; if (edit) setRows(rows.map((r) => (r.id === edit.id ? fromForm(f, edit) : r))); else setRows([fromForm(f), ...rows]); setModal(null); toast(edit ? `${singular} berhasil diperbarui` : `${singular} berhasil ditambahkan`) }, 500) }
-  const del = (r: T) => confirm({ title: `Hapus ${singular}?`, message: `Data ${singular.toLowerCase()} akan dihapus permanen dan tidak dapat dikembalikan.`, danger: true, onOk: () => { setRows(rows.filter((x) => x.id !== r.id)); toast(`${singular} berhasil dihapus`) } })
+  
+  const save = async () => { const x: Record<string, string> = {}; fields.forEach((d) => { const v = (f[d.k] ?? '').trim(); if (d.req && !v) x[d.k] = `${d.l} wajib diisi`; else if (d.validate && v) { const m = d.validate(v, f); if (m) x[d.k] = m } }); setE(x); if (Object.keys(x).length) return
+    setBusy(true); try {
+      const edit = modal!.edit;
+      if (edit) {
+        if (onUpdate) await onUpdate(edit.id, f);
+        setRows(rows.map((r) => (r.id === edit.id ? fromForm(f, edit) : r)));
+      } else {
+        const newData = onCreate ? await onCreate(f) : fromForm(f);
+        setRows([newData, ...rows]);
+      }
+      setModal(null); toast(edit ? `${singular} berhasil diperbarui` : `${singular} berhasil ditambahkan`)
+    } catch (err: any) { toast(err.message, 'err') } finally { setBusy(false) } }
+
+  const del = (r: T) => confirm({ title: `Hapus ${singular}?`, message: `Data ${singular.toLowerCase()} akan dihapus permanen dan tidak dapat dikembalikan.`, danger: true, onOk: async () => { 
+    try { if (onDelete) await onDelete(r.id); setRows(rows.filter((x) => x.id !== r.id)); toast(`${singular} berhasil dihapus`) } catch (err: any) { toast(err.message, 'err') } 
+  } })
   return (
     <div><PageHeader crumbs={useCrumbs({ l: title })} title={title} subtitle={subtitle} actions={<>{importer && <Btn variant="outline" icon={<Upload size={18} />} onClick={() => setImp(true)}>Import Excel</Btn>}<Btn variant="outline" icon={<Download size={18} />} onClick={() => { download(`${title}.csv`); toast('Data berhasil diekspor') }}>Ekspor</Btn><Btn icon={<Plus size={18} />} onClick={() => open()}>Tambah {singular}</Btn></>} />
-      <DataTable rows={shown} cols={cols} pageSize={10} selectable searchText={searchText} searchPlaceholder={`Cari ${singular.toLowerCase()}...`} onRow={onRowOpen ?? ((r) => setView(r))}
+      <DataTable rows={shown} cols={cols} pageSize={10} selectable searchText={searchText} searchPlaceholder={`Cari ${singular.toLowerCase()}...`} onRow={onRowOpen ?? ((r) => setView(r))} loading={loading}
         filters={filterDefs?.map((d) => <Select key={d.k} aria-label={d.l} value={flt[d.k] ?? 'Semua'} onChange={(ev) => setFlt({ ...flt, [d.k]: ev.target.value })} options={['Semua', ...d.options]} className="!w-44 !h-11" />)}
         bulk={[{ l: 'Hapus', icon: <Trash2 size={15} />, danger: true, onClick: (ids, clear) => confirm({ title: `Hapus ${ids.length} Data?`, message: 'Seluruh data terpilih akan dihapus permanen.', danger: true, onOk: () => { setRows(rows.filter((r) => !ids.includes(r.id))); clear(); toast(`${ids.length} data berhasil dihapus`) } }) }, { l: 'Ekspor', icon: <Download size={15} />, onClick: (ids, clear) => { download('terpilih.csv'); toast(`${ids.length} data diekspor`); clear() } }]}
         actions={(r) => [{ l: 'Lihat Detail', icon: <Eye size={16} />, onClick: () => (onRowOpen ? onRowOpen(r) : setView(r)) }, { l: 'Edit', icon: <Pencil size={16} />, onClick: () => open(r) }, { l: 'Hapus', icon: <Trash2 size={16} />, danger: true, onClick: () => del(r) }]} />
@@ -48,28 +68,72 @@ const nm = (v: string) => (v.trim().length < 3 ? 'Nama minimal 3 karakter' : '')
 const em = (v: string) => (/^\S+@\S+\.\S+$/.test(v) ? '' : 'Format email tidak valid')
 
 export function DataSiswa() {
-  return <Crud singular="Siswa" title="Data Siswa" subtitle="Kelola data seluruh siswa SMK Negeri 2 Indramayu" rows={students} importer searchText={(s) => s.nama + s.nis}
-    filterDefs={[{ k: 'kelas', l: 'Kelas', options: kelas.map((k) => k.nama), get: (s) => kelasById(s.kelasId).nama }, { k: 'jk', l: 'Jenis Kelamin', options: ['Laki-laki', 'Perempuan'], get: (s) => (s.jk === 'L' ? 'Laki-laki' : 'Perempuan') }, { k: 'st', l: 'Status', options: ['Aktif', 'Nonaktif'], get: (s) => s.status }]}
-    cols={[{ key: 'nama', header: 'Siswa', sort: (s: any) => s.nama, render: (s: any) => <NameCell name={s.nama} sub={s.email} /> }, { key: 'nis', header: 'NIS', sort: (s: any) => s.nis }, { key: 'kelas', header: 'Kelas', sort: (s: any) => kelasById(s.kelasId).nama, render: (s: any) => kelasById(s.kelasId).nama }, { key: 'jk', header: 'Jenis Kelamin', render: (s: any) => (s.jk === 'L' ? 'Laki-laki' : 'Perempuan') }, { key: 'status', header: 'Status', render: (s: any) => <StatusBadge s={s.status} /> }]}
-    fields={[{ k: 'nama', l: 'Nama Lengkap', req: true, validate: nm }, { k: 'nis', l: 'NIS', req: true, validate: (v) => (/^\d{8,12}$/.test(v) ? '' : 'NIS harus 8-12 digit angka') }, { k: 'kelasId', l: 'Kelas', options: kelas.map((k) => ({ v: k.id, l: k.nama })) }, { k: 'jk', l: 'Jenis Kelamin', options: [{ v: 'L', l: 'Laki-laki' }, { v: 'P', l: 'Perempuan' }] }, { k: 'email', l: 'Email', req: true, validate: em }, { k: 'hp', l: 'Nomor Telepon', req: true }, { k: 'status', l: 'Status', options: ['Aktif', 'Nonaktif'] }]}
-    toForm={(s) => ({ nama: s.nama, nis: s.nis, kelasId: s.kelasId, jk: s.jk, email: s.email, hp: s.hp, status: s.status })} fromForm={(f, o) => ({ ...(o ?? { id: 's' + Date.now(), hadir: 90, rata: 80, belum: 0, risiko: false, alamat: 'Indramayu' }), ...f } as any)}
-    detail={(s) => <><div className="text-center"><Avatar name={s.nama} size={80} className="mx-auto" /><h3 className="font-extrabold text-lg mt-2">{s.nama}</h3><StatusBadge s={s.status} /></div><Det items={[['NIS', s.nis], ['Kelas', kelasById(s.kelasId).nama], ['Jurusan', jurusanNama(kelasById(s.kelasId).jurusan)], ['Jenis Kelamin', s.jk === 'L' ? 'Laki-laki' : 'Perempuan'], ['Email', s.email], ['Telepon', s.hp], ['Alamat', s.alamat]]} /></>} />
+  const [classList, setClassList] = useState<any[]>([])
+  useEffect(() => { fetchKelas().then(setClassList).catch(() => {}) }, [])
+
+  return <Crud singular="Siswa" title="Data Siswa" subtitle="Kelola data seluruh siswa SMK Negeri 2 Indramayu" rows={[]} importer 
+    onFetch={async () => {
+      const data = await fetchSiswaKelas();
+      return (data || []).map((d: any) => ({
+        id: d.id_siswa,
+        nama: d.user?.full_name || 'Tanpa Nama',
+        nis: d.user?.nip_nis || '-',
+        email: d.user?.email || '-',
+        status: d.user?.status || 'Aktif',
+        kelasId: d.id_kelas,
+        jk: 'L',
+        hp: '-',
+        alamat: 'Indramayu'
+      }));
+    }}
+    onCreate={async (f) => {
+      const res = await createSiswa(f);
+      return { id: res.id, ...f };
+    }}
+    onUpdate={async (id, f) => {
+      await updateSiswa(id, f);
+    }}
+    onDelete={deleteUser}
+    searchText={(s) => s.nama + s.nis}
+    filterDefs={[{ k: 'kelas', l: 'Kelas', options: classList.map((k) => k.name), get: (s) => classList.find(k => k.id === s.kelasId)?.name || '' }, { k: 'st', l: 'Status', options: ['Aktif', 'Nonaktif'], get: (s) => s.status }]}
+    cols={[{ key: 'nama', header: 'Siswa', sort: (s: any) => s.nama, render: (s: any) => <NameCell name={s.nama} sub={s.email} /> }, { key: 'nis', header: 'NIS', sort: (s: any) => s.nis }, { key: 'kelas', header: 'Kelas', sort: (s: any) => classList.find(k => k.id === s.kelasId)?.name, render: (s: any) => classList.find(k => k.id === s.kelasId)?.name }, { key: 'status', header: 'Status', render: (s: any) => <StatusBadge s={s.status} /> }]}
+    fields={[{ k: 'nama', l: 'Nama Lengkap', req: true, validate: nm }, { k: 'nis', l: 'NIS', req: true }, { k: 'kelasId', l: 'Kelas', options: classList.map((k) => ({ v: k.id, l: k.name })) }, { k: 'email', l: 'Email', req: true, validate: em }, { k: 'status', l: 'Status', options: ['Aktif', 'Nonaktif'] }]}
+    toForm={(s) => ({ nama: s.nama, nis: s.nis, kelasId: s.kelasId, email: s.email, status: s.status })} 
+    fromForm={(f, o) => ({ ...(o ?? {}), ...f } as any)}
+    detail={(s) => <><div className="text-center"><Avatar name={s.nama} size={80} className="mx-auto" /><h3 className="font-extrabold text-lg mt-2">{s.nama}</h3><StatusBadge s={s.status} /></div><Det items={[['NIS', s.nis], ['Kelas', classList.find(k => k.id === s.kelasId)?.name || '-'], ['Email', s.email]]} /></>} />
 }
 export function DataGuru() {
-  return <Crud singular="Guru" title="Data Guru" subtitle="Kelola data guru dan staf pengajar" rows={teachers} searchText={(t) => t.nama + t.nip}
-    filterDefs={[{ k: 'mapel', l: 'Mata Pelajaran', options: subjects.map((s) => s.nama), get: (t) => subjectById(t.mapel).nama }, { k: 'st', l: 'Status', options: ['Aktif', 'Cuti'], get: (t) => t.status }]}
-    cols={[{ key: 'nama', header: 'Guru', sort: (t: any) => t.nama, render: (t: any) => <NameCell name={t.nama} sub={t.email} /> }, { key: 'nip', header: 'NIP' }, { key: 'mapel', header: 'Mata Pelajaran', render: (t: any) => subjectById(t.mapel).nama }, { key: 'hp', header: 'Telepon' }, { key: 'status', header: 'Status', render: (t: any) => <StatusBadge s={t.status} /> }]}
-    fields={[{ k: 'nama', l: 'Nama Lengkap', req: true, validate: nm }, { k: 'nip', l: 'NIP', req: true, validate: (v) => (/^\d{18}$/.test(v) ? '' : 'NIP harus 18 digit angka') }, { k: 'mapel', l: 'Mata Pelajaran', options: subjects.map((s) => ({ v: s.id, l: s.nama })) }, { k: 'email', l: 'Email', req: true, validate: em }, { k: 'hp', l: 'Telepon', req: true }, { k: 'status', l: 'Status', options: ['Aktif', 'Cuti'] }]}
-    toForm={(t) => ({ nama: t.nama, nip: t.nip, mapel: t.mapel, email: t.email, hp: t.hp, status: t.status })} fromForm={(f, o) => ({ ...(o ?? { id: 't' + Date.now(), sapaan: f.nama }), ...f } as any)}
-    detail={(t) => <><div className="text-center"><Avatar name={t.nama} size={80} className="mx-auto" /><h3 className="font-extrabold text-lg mt-2">{t.nama}</h3><StatusBadge s={t.status} /></div><Det items={[['NIP', t.nip], ['Mata Pelajaran', subjectById(t.mapel).nama], ['Email', t.email], ['Telepon', t.hp], ['Kelas Diampu', offerings.filter((o) => o.guru === t.id).length]]} /></>} />
+  return <Crud singular="Guru" title="Data Guru" subtitle="Kelola data guru dan staf pengajar" rows={[]}
+    onFetch={() => fetchUsers('guru')}
+    onCreate={createGuru}
+    onUpdate={updateGuru}
+    onDelete={deleteUser}
+    searchText={(t: any) => t.full_name + (t.nip_nis || '')}
+    filterDefs={[{ k: 'st', l: 'Status', options: ['Aktif', 'Cuti'], get: (t: any) => t.status || 'Aktif' }]}
+    cols={[{ key: 'nama', header: 'Guru', sort: (t: any) => t.full_name, render: (t: any) => <NameCell name={t.full_name} sub={t.email} /> }, { key: 'nip', header: 'NIP', render: (t: any) => t.nip_nis }, { key: 'status', header: 'Status', render: (t: any) => <StatusBadge s={t.status || 'Aktif'} /> }]}
+    fields={[{ k: 'nama', l: 'Nama Lengkap', req: true, validate: nm }, { k: 'nip', l: 'NIP', req: true }, { k: 'email', l: 'Email', req: true, validate: em }, { k: 'status', l: 'Status', options: ['Aktif', 'Cuti'] }]}
+    toForm={(t: any) => ({ nama: t.full_name, nip: t.nip_nis || '', email: t.email, status: t.status || 'Aktif' })} 
+    fromForm={(f, o) => ({ ...(o ?? {}), full_name: f.nama, nip_nis: f.nip, email: f.email, status: f.status } as any)}
+    detail={(t: any) => <><div className="text-center"><Avatar name={t.full_name} size={80} className="mx-auto" /><h3 className="font-extrabold text-lg mt-2">{t.full_name}</h3><StatusBadge s={t.status || 'Aktif'} /></div><Det items={[['NIP', t.nip_nis], ['Email', t.email]]} /></>} />
 }
 export function DataKelas() {
-  const nav = useNavigate()
-  return <Crud singular="Kelas" title="Data Kelas" subtitle="Kelola rombongan belajar, wali kelas, dan ruang" rows={kelas} searchText={(k) => k.nama + k.kode} onRowOpen={(k) => nav(`/tu/kelas/${k.id}`)}
-    filterDefs={[{ k: 'tg', l: 'Tingkat', options: ['X', 'XI', 'XII'], get: (k) => k.tingkat }, { k: 'jr', l: 'Jurusan', options: jurusan.map((j) => j.kode), get: (k) => k.jurusan }]}
-    cols={[{ key: 'nama', header: 'Kelas', sort: (k: any) => k.nama, render: (k: any) => <div><b>{k.nama}</b><div className="text-xs text-muted">{k.kode}</div></div> }, { key: 'jurusan', header: 'Jurusan', render: (k: any) => jurusanNama(k.jurusan) }, { key: 'wali', header: 'Wali Kelas', render: (k: any) => teacherById(k.wali).sapaan }, { key: 'ruang', header: 'Ruang' }, { key: 'n', header: 'Siswa', render: () => '25' }]}
-    fields={[{ k: 'nama', l: 'Nama Kelas', req: true }, { k: 'kode', l: 'Kode Kelas', req: true }, { k: 'tingkat', l: 'Tingkat', options: ['X', 'XI', 'XII'] }, { k: 'jurusan', l: 'Jurusan', options: jurusan.map((j) => ({ v: j.id, l: j.nama })) }, { k: 'wali', l: 'Wali Kelas', options: teachers.map((t) => ({ v: t.id, l: t.sapaan })) }, { k: 'ruang', l: 'Ruang', req: true }]}
-    toForm={(k) => ({ nama: k.nama, kode: k.kode, tingkat: k.tingkat, jurusan: k.jurusan, wali: k.wali, ruang: k.ruang })} fromForm={(f, o) => ({ ...(o ?? { id: 'k' + Date.now() }), ...f } as any)} />
+  const nav = useNavigate(); const [teachers, setTeachers] = useState<any[]>([]); const [jurusan, setJurusan] = useState<string[]>([])
+  useEffect(() => { fetchUsers('guru').then(setTeachers).catch(() => {}); fetchJurusan().then(setJurusan).catch(() => {}) }, [])
+  return <Crud singular="Kelas" title="Data Kelas" subtitle="Kelola rombongan belajar, wali kelas, dan ruang" rows={[]} onRowOpen={(k) => nav(`/tu/kelas/${k.id}`)}
+    onFetch={fetchKelas}
+    onCreate={async (f) => {
+      const res = await createKelas({ name: f.nama, grade: Number(f.tingkat), major: f.jurusan, academic_year: '2026/2027', wali_kelas_id: f.wali });
+      return { ...res, id: res.id };
+    }}
+    onUpdate={async (id, f) => {
+      await updateKelas(id, { name: f.nama, grade: Number(f.tingkat), major: f.jurusan, wali_kelas_id: f.wali });
+    }}
+    onDelete={deleteKelas}
+    searchText={(k: any) => k.name}
+    filterDefs={[{ k: 'tg', l: 'Tingkat', options: ['10', '11', '12'], get: (k: any) => String(k.grade) }, { k: 'jr', l: 'Jurusan', options: jurusan, get: (k: any) => k.major }]}
+    cols={[{ key: 'nama', header: 'Kelas', sort: (k: any) => k.name, render: (k: any) => <div><b>{k.name}</b></div> }, { key: 'jurusan', header: 'Jurusan', render: (k: any) => k.major }, { key: 'wali', header: 'Wali Kelas', render: (k: any) => teachers.find(t => t.id === k.wali_kelas_id)?.full_name || '-' }, { key: 'n', header: 'Siswa', render: () => '-' }]}
+    fields={[{ k: 'nama', l: 'Nama Kelas', req: true }, { k: 'tingkat', l: 'Tingkat', options: ['10', '11', '12'] }, { k: 'jurusan', l: 'Jurusan', options: jurusan }, { k: 'wali', l: 'Wali Kelas', options: teachers.map((t) => ({ v: t.id, l: t.full_name })) }]}
+    toForm={(k: any) => ({ nama: k.name, tingkat: String(k.grade), jurusan: k.major, wali: k.wali_kelas_id })} fromForm={(f, o) => ({ ...(o ?? {}), name: f.nama, grade: Number(f.tingkat), major: f.jurusan, wali_kelas_id: f.wali } as any)} />
 }
 export function KelasDetailTU() {
   const { id } = useParams(); const k = kelasById(id!); const { toast } = useApp()
@@ -78,12 +142,19 @@ export function KelasDetailTU() {
     <DataTable rows={studentsOf(k.id)} pageSize={10} searchText={(s) => s.nama + s.nis} searchPlaceholder="Cari siswa" cols={[{ key: 'nama', header: 'Siswa', sort: (s) => s.nama, render: (s) => <NameCell name={s.nama} sub={s.email} /> }, { key: 'nis', header: 'NIS' }, { key: 'jk', header: 'Jenis Kelamin', render: (s) => (s.jk === 'L' ? 'Laki-laki' : 'Perempuan') }, { key: 'st', header: 'Status', render: (s) => <StatusBadge s={s.status} /> }]} /></div>
 }
 export function DataMapel() {
-  return <Crud singular="Mata Pelajaran" title="Data Mata Pelajaran" subtitle="Kelola mata pelajaran umum dan kejuruan" rows={subjects} searchText={(s) => s.nama + s.kode}
-    filterDefs={[{ k: 'kel', l: 'Kelompok', options: ['Umum', 'Kejuruan'], get: (s) => s.kelompok }]}
-    cols={[{ key: 'nama', header: 'Mata Pelajaran', sort: (s: any) => s.nama, render: (s: any) => <div className="flex items-center gap-3"><span className="w-3 h-8 rounded-full" style={{ background: s.warna }} /><b>{s.nama}</b></div> }, { key: 'kode', header: 'Kode', sort: (s: any) => s.kode }, { key: 'kelompok', header: 'Kelompok', render: (s: any) => <Badge tone={s.kelompok === 'Umum' ? 'blue' : 'green'}>{s.kelompok}</Badge> }, { key: 'jam', header: 'JP/Minggu', sort: (s: any) => s.jam }, { key: 'guru', header: 'Guru Utama', render: (s: any) => teacherById(s.guru).sapaan }]}
-    fields={[{ k: 'nama', l: 'Nama Mata Pelajaran', req: true }, { k: 'kode', l: 'Kode', req: true, validate: (v) => (v.length > 5 ? 'Maksimal 5 karakter' : '') }, { k: 'kelompok', l: 'Kelompok', options: ['Umum', 'Kejuruan'] }, { k: 'jam', l: 'Jam Pelajaran/Minggu', type: 'number', req: true }, { k: 'guru', l: 'Guru Utama', options: teachers.map((t) => ({ v: t.id, l: t.sapaan })) }]}
-    toForm={(s) => ({ nama: s.nama, kode: s.kode, kelompok: s.kelompok, jam: String(s.jam), guru: s.guru })} fromForm={(f, o) => ({ ...(o ?? { id: 'm' + Date.now(), warna: '#0B3D5F' }), ...f, jam: Number(f.jam) } as any)}
-    detail={(s) => <><h3 className="font-extrabold text-xl">{s.nama}</h3><Det items={[['Kode', s.kode], ['Kelompok', s.kelompok], ['JP per minggu', s.jam], ['Guru utama', teacherById(s.guru).nama], ['Dipakai di kelas', offerings.filter((o) => o.subjectId === s.id).length]]} /></>} />
+  const [teachers, setTeachers] = useState<any[]>([])
+  useEffect(() => { fetchUsers('guru').then(setTeachers).catch(() => {}) }, [])
+  return <Crud singular="Mata Pelajaran" title="Data Mata Pelajaran" subtitle="Kelola mata pelajaran umum dan kejuruan" rows={[]}
+    onFetch={fetchMapel}
+    onCreate={createMapel}
+    onUpdate={updateMapel}
+    onDelete={deleteMapel}
+    searchText={(s: any) => s.name + s.code}
+    filterDefs={[{ k: 'kel', l: 'Kelompok', options: ['Umum', 'Kejuruan'], get: (s: any) => s.category }]}
+    cols={[{ key: 'nama', header: 'Mata Pelajaran', sort: (s: any) => s.name, render: (s: any) => <div className="flex items-center gap-3"><span className="w-3 h-8 rounded-full bg-primary-dark" /><b>{s.name}</b></div> }, { key: 'kode', header: 'Kode', sort: (s: any) => s.code }, { key: 'kelompok', header: 'Kelompok', render: (s: any) => <Badge tone={s.category === 'Umum' ? 'blue' : 'green'}>{s.category}</Badge> }, { key: 'guru', header: 'Guru Utama', render: (s: any) => teachers.find(t => t.id === s.teacher_id)?.full_name || '-' }]}
+    fields={[{ k: 'nama', l: 'Nama Mata Pelajaran', req: true }, { k: 'kode', l: 'Kode', req: true, validate: (v) => (v.length > 5 ? 'Maksimal 5 karakter' : '') }, { k: 'kelompok', l: 'Kelompok', options: ['Umum', 'Kejuruan'] }, { k: 'guru', l: 'Guru Utama', options: teachers.map((t) => ({ v: t.id, l: t.full_name })) }]}
+    toForm={(s: any) => ({ nama: s.name, kode: s.code, kelompok: s.category, guru: s.teacher_id })} fromForm={(f, o) => ({ ...(o ?? {}), name: f.nama, code: f.kode, category: f.kelompok, teacher_id: f.guru } as any)}
+    detail={(s: any) => <><h3 className="font-extrabold text-xl">{s.name}</h3><Det items={[['Kode', s.code], ['Kelompok', s.category], ['Guru utama', teachers.find(t => t.id === s.teacher_id)?.full_name || '-']]} /></>} />
 }
 export function DataJurusan() {
   return <Crud singular="Jurusan" title="Data Jurusan" subtitle="Kelola program keahlian" rows={jurusan} searchText={(j) => j.nama + j.kode}
@@ -163,52 +234,36 @@ export function ManajemenPengguna() {
   const { toast, confirm } = useApp(); const [tab, setTab] = useTab('pengguna');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [perm, setPerm] = useState(() => permissions.map(p => [...p]))
 
-  // Fetch users from Supabase profiles table
-  useEffect(() => {
-    fetch('https://phtqlmidfaocacphblej.supabase.co/rest/v1/profiles?select=id,nama_lengkap,email,role,status', {
-      headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo'
-      }
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setUsers(data.map((u: any) => ({
-            id: u.id,
-            nama: u.nama_lengkap,
-            ident: u.email,
-            role: u.role || 'Siswa',
-            aktif: u.status === 'aktif'
-          })));
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchUsers();
+      setUsers(data.map((u: any) => ({
+        id: u.id,
+        nama: u.full_name,
+        ident: u.email,
+        role: u.role || 'Siswa',
+        aktif: u.status === 'Aktif'
+      })));
+    } catch (err: any) {
+      toast(err.message, 'err');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const fetchUsers = () => {
-    fetch('https://phtqlmidfaocacphblej.supabase.co/rest/v1/profiles?select=id,nama_lengkap,email,role,status', {
-      headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjI0NTksImV4cCI6MjEwNjQzODQ1OX0.8mlV5OrWgBJUWEzejGQHnVxsZqidwPwkq-tH3w_WNtg',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo'
-      }
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setUsers(data.map((u: any) => ({
-            id: u.id,
-            nama: u.nama_lengkap,
-            ident: u.email,
-            role: u.role || 'Siswa',
-            aktif: u.status === 'aktif'
-          })));
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  useEffect(() => { load() }, []);
+
+  const updateRole = async (id: string, role: string) => {
+    try {
+      await updateUserRole(id, role);
+      setUsers(users.map(u => u.id === id ? { ...u, role } : u));
+      toast('Role pengguna berhasil diperbarui');
+    } catch (err: any) {
+      toast(err.message, 'err');
+    }
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -260,10 +315,10 @@ export function ManajemenPengguna() {
       <Tabs className="mb-6" tabs={[{ v: 'pengguna', l: 'Pengguna' }, { v: 'hak', l: 'Matriks Hak Akses' }]} value={tab} onChange={setTab} />
       <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Tambah Pengguna & Peran Baru" footer={<><Btn variant="outline" onClick={() => setShowAddModal(false)}>Batal</Btn><Btn loading={isSubmitting} icon={<Save size={16} />} onClick={handleAddUser}>Simpan Pengguna</Btn></>}>
         <form onSubmit={handleAddUser} className="space-y-4">
-          <Input label="Nama Lengkap" placeholder="Contoh: Budi Santoso" value={newName} onChange={(e) => setNewName(e.target.value)} req />
-          <Input label="Alamat Email (Akun Login)" placeholder="budi@smkn2.sch.id" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} req />
+          <Input label="Nama Lengkap" placeholder="Contoh: Budi Santoso" value={newName} onChange={(e) => setNewName(e.target.value)} required />
+          <Input label="Alamat Email (Akun Login)" placeholder="budi@smkn2.sch.id" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
           <Select label="Peran / Role" value={newRole} onChange={(e) => setNewRole(e.target.value)} options={['Tata Usaha', 'Guru Mapel', 'Wali Kelas', 'Kepala Sekolah', 'Siswa']} />
-          <Input label="Kata Sandi Awal" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} req />
+          <Input label="Kata Sandi Awal" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
         </form>
       </Modal>
       {tab === 'pengguna' ? <DataTable rows={users} pageSize={10} searchText={(u) => u.nama + u.ident} searchPlaceholder="Cari nama atau email" filters={null} cols={[{ key: 'nama', header: 'Pengguna', sort: (u: any) => u.nama, render: (u: any) => <NameCell name={u.nama} sub={u.ident} /> }, { key: 'role', header: 'Peran', render: (u: any) => <select aria-label={`Peran ${u.nama}`} value={u.role} onChange={async (e) => {

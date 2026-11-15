@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BookOpen, Calendar, Camera, Clock, CheckCheck, ClipboardList, List, LayoutGrid, MapPin, Megaphone, Pencil, Plus, Trash2, BookMarked, Bell, Award, FileText, CheckCircle2, Info, Palette, Type, Save, Users } from 'lucide-react'
 import { Accordion, Avatar, Badge, Btn, Card, CardTitle, Chips, ClassCard, Empty, Input, PageHeader, SearchBar, Segmented, Select, Tabs, Textarea, Toggle, cn, Modal, useCrumbs, useTab, isRO, Field } from '@/components/ui'
-import { ROLES, useApp, useRole } from '@/store'
-import { HARI, HARI_S, TODAY, archived, fmtTgl, guruOfferings, kalender, kuis, offeringTitle, offerings, pengumuman, scheduleOf, siswaOfferings, subjectById, teacherById, tugas, weekDays, kelasById, fmtBatas, addDays, type Offering, type Slot } from '@/data'
+import { ROLES, useApp, useRole, supabase } from '@/store'
+import { HARI, HARI_S, TODAY, archived, fmtTgl, guruOfferings, kalender, kuis, offeringTitle, offerings, scheduleOf, siswaOfferings, subjectById, teacherById, tugas, weekDays, kelasById, fmtBatas, addDays, type Offering, type Slot } from '@/data'
 import { PasswordForm } from './auth'
+import { fetchPengumuman, createPengumuman, type Pengumuman } from '@/services/pengumuman'
+import { updateProfile } from '@/services/profil'
+import { useEffect } from 'react'
 
 // ---------- Jadwal Minggu Ini (strip) ----------
 export function ScheduleCard({ offs, mode }: { offs: Offering[]; mode: 'siswa' | 'guru' }) {
@@ -94,26 +97,103 @@ export function JadwalPage() {
 
 // ---------- Pengumuman ----------
 export function PengumumanList() {
-  const { role, cfg } = useRole(); const { toast } = useApp(); const [q, setQ] = useState(''); const [cat, setCat] = useState('Semua'); const [add, setAdd] = useState(false); const [items, setItems] = useState(pengumuman)
-  const [f, setF] = useState({ judul: '', isi: '' }); const [e, setE] = useState<Record<string, string>>({})
-  const list = items.filter((p) => (cat === 'Semua' || p.kategori === cat) && (p.judul + p.isi).toLowerCase().includes(q.toLowerCase()))
-  const save = () => { const x: Record<string, string> = {}; if (!f.judul.trim()) x.judul = 'Judul wajib diisi'; if (f.isi.trim().length < 10) x.isi = 'Isi pengumuman minimal 10 karakter'; setE(x); if (Object.keys(x).length) return; setItems([{ id: 'pn' + Date.now(), judul: f.judul, isi: f.isi, oleh: cfg.nama, tgl: '29 Okt 2026', kategori: 'Akademik', penting: false }, ...items]); setAdd(false); setF({ judul: '', isi: '' }); toast('Pengumuman berhasil dipublikasikan') }
+  const { role, cfg } = useRole(); 
+  const { toast } = useApp(); 
+  const [q, setQ] = useState(''); 
+  const [cat, setCat] = useState('Semua'); 
+  const [add, setAdd] = useState(false); 
+  const [items, setItems] = useState<Pengumuman[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchPengumuman(role || undefined);
+      setItems(data);
+    } catch (err: any) {
+      toast(err.message || 'Gagal mengambil pengumuman', 'err');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetch();
+  }, [role]);
+
+  const [f, setF] = useState({ judul: '', isi: '', kategori: 'Akademik', penting: false }); 
+  const [e, setE] = useState<Record<string, string>>({});
+  
+  const list = items.filter((p) => (cat === 'Semua' || p.kategori === cat) && (p.judul + p.isi).toLowerCase().includes(q.toLowerCase()));
+  
+  const save = async () => { 
+    const x: Record<string, string> = {}; 
+    if (!f.judul.trim()) x.judul = 'Judul wajib diisi'; 
+    if (f.isi.trim().length < 10) x.isi = 'Isi pengumuman minimal 10 karakter'; 
+    setE(x); 
+    if (Object.keys(x).length) return; 
+
+    try {
+      await createPengumuman({
+        judul: f.judul,
+        isi: f.isi,
+        kategori: f.kategori,
+        penting: f.penting,
+        dibuat_oleh: cfg.nama,
+        target_role: undefined
+      });
+      setAdd(false); 
+      setF({ judul: '', isi: '', kategori: 'Akademik', penting: false }); 
+      toast('Pengumuman berhasil dipublikasikan');
+      fetch();
+    } catch (err: any) {
+      toast(err.message || 'Gagal mengirim pengumuman', 'err');
+    }
+  };
+
   return (
     <div>
-      <PageHeader crumbs={useCrumbs({ l: 'Pengumuman' })} title="Pengumuman" subtitle="Informasi resmi sekolah dan kelas. Pengumuman bersifat satu arah." actions={(role === 'guru') && <Btn icon={<Plus size={18} />} onClick={() => setAdd(true)}>Buat Pengumuman</Btn>} />
+      <PageHeader crumbs={useCrumbs({ l: 'Pengumuman' })} title="Pengumuman" subtitle="Informasi resmi sekolah dan kelas. Pengumuman bersifat satu arah." actions={(role === 'guru' || role === 'tu') && <Btn icon={<Plus size={18} />} onClick={() => setAdd(true)}>Buat Pengumuman</Btn>} />
       <div className="flex flex-wrap gap-3 mb-5 items-center"><SearchBar value={q} onChange={setQ} placeholder="Cari pengumuman" className="w-80 max-w-full" /><Chips value={cat} onChange={setCat} options={['Semua', 'Akademik', 'Kegiatan', 'Sistem', 'Lomba', 'Tata Tertib'].map((k) => ({ k, l: k }))} /></div>
-      {list.length === 0 ? <Card><Empty title="Pengumuman tidak ditemukan" /></Card> : <div className="grid md:grid-cols-2 gap-5">{list.map((p) => (
-        <Link key={p.id} to={`${cfg.base}/pengumuman/${p.id}`}><Card hover className="h-full"><div className="flex items-center gap-2 mb-2"><Badge tone="blue">{p.kategori}</Badge>{p.penting && <Badge tone="red">Penting</Badge>}<span className="ml-auto text-xs text-muted">{p.tgl}</span></div><h3 className="font-bold text-lg leading-snug">{p.judul}</h3><p className="text-sm text-muted mt-2 line-clamp-2">{p.isi}</p><div className="flex items-center gap-2 mt-4 text-sm"><Avatar name={p.oleh} size={28} /><span className="text-muted">{p.oleh}</span></div></Card></Link>))}</div>}
-      <Modal open={add} onClose={() => setAdd(false)} title="Buat Pengumuman" footer={<><Btn variant="outline" onClick={() => setAdd(false)}>Batal</Btn><Btn onClick={save}>Publikasikan</Btn></>}><Input label="Judul" value={f.judul} onChange={(x) => setF({ ...f, judul: x.target.value })} error={e.judul} /><Textarea label="Isi Pengumuman" value={f.isi} onChange={(x) => setF({ ...f, isi: x.target.value })} error={e.isi} /></Modal>
+      
+      {loading ? <div className="p-10 text-center text-muted">Memuat pengumuman...</div> : list.length === 0 ? <Card><Empty title="Pengumuman tidak ditemukan" /></Card> : <div className="grid md:grid-cols-2 gap-5">{list.map((p) => (
+        <Link key={p.id} to={`${cfg.base}/pengumuman/${p.id}`}><Card hover className="h-full"><div className="flex items-center gap-2 mb-2"><Badge tone="blue">{p.kategori}</Badge>{p.penting && <Badge tone="red">Penting</Badge>}<span className="ml-auto text-xs text-muted">{p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span></div><h3 className="font-bold text-lg leading-snug">{p.judul}</h3><p className="text-sm text-muted mt-2 line-clamp-2">{p.isi}</p><div className="flex items-center gap-2 mt-4 text-sm"><Avatar name={p.dibuat_oleh || 'Admin'} size={28} /><span className="text-muted">{p.dibuat_oleh || 'Admin'}</span></div></Card></Link>))}</div>}
+      
+      <Modal open={add} onClose={() => setAdd(false)} title="Buat Pengumuman" footer={<><Btn variant="outline" onClick={() => setAdd(false)}>Batal</Btn><Btn onClick={save}>Publikasikan</Btn></>}>
+        <div className="space-y-4">
+          <Input label="Judul" value={f.judul} onChange={(x) => setF({ ...f, judul: x.target.value })} error={e.judul} />
+          <Select label="Kategori" value={f.kategori} options={['Akademik', 'Kegiatan', 'Sistem', 'Lomba', 'Tata Tertib']} onChange={(x) => setF({ ...f, kategori: x.target.value })} />
+          <div className="flex items-center gap-2">
+            <Toggle label="Tandai Penting" on={f.penting} onChange={(v) => setF({ ...f, penting: v })} />
+            <span className="text-sm font-medium">Tandai sebagai Penting</span>
+          </div>
+          <Textarea label="Isi Pengumuman" value={f.isi} onChange={(x) => setF({ ...f, isi: x.target.value })} error={e.isi} />
+        </div>
+      </Modal>
     </div>
   )
 }
 export function PengumumanDetail() {
-  const { id } = useParams(); const { cfg } = useRole(); const p = pengumuman.find((x) => x.id === id)
+  const { id } = useParams(); 
+  const { cfg } = useRole(); 
+  const [p, setP] = useState<Pengumuman | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const data = await fetchPengumuman();
+      setP(data.find((x) => x.id === id) || null);
+      setLoading(false);
+    };
+    load();
+  }, [id]);
+
+  if (loading) return <Card><Empty title="Memuat..." /></Card>;
   if (!p) return <Card><Empty title="Pengumuman tidak ditemukan" action={<Btn to={`${cfg.base}/pengumuman`}>Kembali</Btn>} /></Card>
-  return <div><PageHeader crumbs={useCrumbs({ l: 'Pengumuman', to: `${cfg.base}/pengumuman` }, { l: 'Detail' })} title={p.judul} subtitle={`${p.oleh} • ${p.tgl}`} actions={<Btn variant="outline" to={`${cfg.base}/pengumuman`}>Kembali</Btn>} />
+  
+  return <div><PageHeader crumbs={useCrumbs({ l: 'Pengumuman', to: `${cfg.base}/pengumuman` }, { l: 'Detail' })} title={p.judul} subtitle={`${p.dibuat_oleh} • ${p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}`} actions={<Btn variant="outline" to={`${cfg.base}/pengumuman`}>Kembali</Btn>} />
     <div className="grid lg:grid-cols-[1fr_340px] gap-6"><Card><div className="flex gap-2 mb-4"><Badge tone="blue">{p.kategori}</Badge>{p.penting && <Badge tone="red">Penting</Badge>}</div><p className="leading-7 text-[15px]">{p.isi}</p><p className="leading-7 mt-4 text-muted">Pengumuman ini bersifat satu arah. Jika ada pertanyaan, silakan hubungi wali kelas atau guru mata pelajaran terkait.</p></Card>
-      <Card><CardTitle>Pengumuman Lainnya</CardTitle><ul className="space-y-3">{pengumuman.filter((x) => x.id !== p.id).slice(0, 4).map((x) => <li key={x.id}><Link className="block hover:text-primary-dark" to={`${cfg.base}/pengumuman/${x.id}`}><div className="font-bold text-sm">{x.judul}</div><div className="text-xs text-muted">{x.tgl}</div></Link></li>)}</ul></Card></div></div>
+      <Card><CardTitle>Pengumuman Lainnya</CardTitle></Card></div></div>
 }
 
 // ---------- Notifikasi ----------
@@ -132,15 +212,46 @@ export function NotifikasiPage() {
 
 // ---------- Akun ----------
 export function AkunPage() {
-  const { cfg, role } = useRole(); const { toast } = useApp(); const [tab, setTab] = useTab('profil'); const ro = isRO(role)
-  const [f, setF] = useState({ nama: cfg.nama, email: `${cfg.nama.split(',')[0].toLowerCase().replace(/[^a-z ]/g, '').split(' ').join('.')}@smkn2indramayu.sch.id`, hp: '0812-3456-7890', alamat: 'Jl. Jenderal Sudirman No. 12, Indramayu' }); const [e, setE] = useState<Record<string, string>>({})
-  const save = () => { const x: Record<string, string> = {}; if (f.nama.trim().length < 3) x.nama = 'Nama minimal 3 karakter'; if (!/^\S+@\S+\.\S+$/.test(f.email)) x.email = 'Format email tidak valid'; if (!/^[0-9-]{9,}$/.test(f.hp)) x.hp = 'Nomor telepon tidak valid'; setE(x); if (!Object.keys(x).length) toast('Data diri berhasil disimpan') }
+  const { cfg, role, userData } = useRole(); const { toast, refreshUser } = useApp(); const [tab, setTab] = useTab('profil'); const ro = isRO(role)
+  const [f, setF] = useState({ 
+    nama: userData?.full_name || '', 
+    email: userData?.email || '', 
+    hp: userData?.hp || '', 
+    alamat: userData?.alamat || '' 
+  }); 
+  const [e, setE] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  
+  const save = async () => { 
+    const x: Record<string, string> = {}; 
+    if (f.nama.trim().length < 3) x.nama = 'Nama minimal 3 karakter'; 
+    if (!/^\S+@\S+\.\S+$/.test(f.email)) x.email = 'Format email tidak valid'; 
+    if (!/^[0-9-]{9,}$/.test(f.hp)) x.hp = 'Nomor telepon tidak valid'; 
+    setE(x); 
+    if (Object.keys(x).length) return; 
+    
+    setSaving(true);
+    try {
+      await updateProfile(userData?.id, {
+        full_name: f.nama,
+        hp: f.hp,
+        alamat: f.alamat
+      });
+      await refreshUser();
+      toast('Data diri berhasil disimpan');
+    } catch (err: any) {
+      console.error('Update profile error:', err);
+      toast(err.message || 'Gagal menyimpan data', 'err');
+    } finally {
+      setSaving(false);
+    }
+  }
   return (
     <div><PageHeader crumbs={useCrumbs({ l: 'Kelola Akun' })} title="Kelola Akun" subtitle="Atur foto, data diri, dan keamanan akunmu" />
       <Tabs className="mb-6" tabs={[{ v: 'profil', l: 'Data Diri' }, { v: 'foto', l: 'Foto Profil' }, { v: 'sandi', l: 'Ganti Kata Sandi' }]} value={tab} onChange={setTab} />
-      <div className="grid lg:grid-cols-[320px_1fr] gap-6"><Card className="text-center h-fit"><div className="relative inline-block"><Avatar name={cfg.nama} size={104} /><span className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center ring-4 ring-white"><Camera size={16} /></span></div><h3 className="font-bold text-lg mt-3">{cfg.nama}</h3><p className="text-muted text-sm">{cfg.sub}</p><Badge tone="green" className="mt-3">{cfg.chip}</Badge></Card>
-        <Card>{tab === 'profil' && <div className="space-y-4 max-w-xl"><Input label="Nama Lengkap" value={f.nama} disabled={ro} onChange={(x) => setF({ ...f, nama: x.target.value })} error={e.nama} /><Input label="Email" value={f.email} disabled={ro} onChange={(x) => setF({ ...f, email: x.target.value })} error={e.email} /><Input label="Nomor Telepon" value={f.hp} disabled={ro} onChange={(x) => setF({ ...f, hp: x.target.value })} error={e.hp} /><Textarea label="Alamat" value={f.alamat} disabled={ro} onChange={(x) => setF({ ...f, alamat: x.target.value })} />{ro ? <p className="text-sm text-muted flex items-center gap-2"><Info size={16} />Data diri dikelola oleh Tata Usaha.</p> : <Btn icon={<Save size={18} />} onClick={save}>Simpan Perubahan</Btn>}</div>}
-          {tab === 'foto' && <div className="max-w-xl"><CardTitle>Foto Profil</CardTitle><p className="text-sm text-muted mb-4">Gunakan foto formal berukuran maksimal 2 MB (JPG atau PNG).</p><div className="flex gap-3"><Btn icon={<Camera size={18} />} onClick={() => toast('Foto profil berhasil diperbarui')}>Unggah Foto Baru</Btn><Btn variant="outline" onClick={() => toast('Foto profil dihapus', 'info')}>Hapus Foto</Btn></div></div>}
+      <div className="grid lg:grid-cols-[320px_1fr] gap-6"><Card className="text-center h-fit"><div className="relative inline-block"><Avatar name={userData?.full_name || 'User'} size={104} /><span className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center ring-4 ring-white"><Camera size={16} /></span></div><h3 className="font-bold text-lg mt-3">{userData?.full_name || 'User'}</h3><p className="text-muted text-sm">{userData?.role || 'Siswa'}</p><Badge tone="green" className="mt-3">{userData?.role?.toUpperCase() || 'SISWA'}</Badge></Card>
+        <Card>{tab === 'profil' && <div className="space-y-4 max-w-xl"><Input label="Nama Lengkap" value={f.nama} disabled={ro} onChange={(x) => setF({ ...f, nama: x.target.value })} error={e.nama} /><Input label="Email" value={f.email} disabled onChange={(x) => setF({ ...f, email: x.target.value })} error={e.email} /><Input label="Nomor Telepon" value={f.hp} disabled={ro} onChange={(x) => setF({ ...f, hp: x.target.value })} error={e.hp} /><Textarea label="Alamat" value={f.alamat} disabled={ro} onChange={(x) => setF({ ...f, alamat: x.target.value })} />{ro ? <p className="text-sm text-muted flex items-center gap-2"><Info size={16} />Data diri dikelola oleh Tata Usaha.</p> : <Btn icon={<Save size={18} />} loading={saving} onClick={save}>Simpan Perubahan</Btn>}</div>}
+          {tab === 'foto' && <div className="max-w-xl"><CardTitle>Foto Profil</CardTitle><p className="text-sm text-muted mb-4">Gunakan foto formal berukuran maksimal 2 MB (JPG atau PNG).</p><div className="flex gap-3"><Btn icon={<Camera size={18} />} onClick={() => toast('Fitur unggah foto dalam pengembangan', 'info')}>Unggah Foto Baru</Btn><Btn variant="outline" onClick={() => toast('Fitur hapus foto dalam pengembangan', 'info')}>Hapus Foto</Btn></div></div>}
           {tab === 'sandi' && <div className="max-w-md"><CardTitle>Ganti Kata Sandi</CardTitle><PasswordForm onDone={() => toast('Kata sandi berhasil diubah')} /></div>}</Card></div></div>
   )
 }

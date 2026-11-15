@@ -84,7 +84,7 @@ export function TopNavLayout() {
         </div>
       </header>
       {mob && <div className="lg:hidden fixed top-[72px] inset-x-0 z-40 bg-[--color-navbar-bg] p-3 shadow-lg pop border-t border-[--color-navbar-border]">{cfg.menus.map((m) => <NavLink key={m.to} to={m.to} className={({ isActive }) => cn('flex items-center gap-3 h-12 px-4 rounded-xl text-[--color-navbar-inactive] font-semibold', isActive && 'bg-[--color-navbar-active] font-extrabold')}><m.icon size={20} />{m.label}</NavLink>)}</div>}
-      {role === 'siswa' && pathname.endsWith('/beranda') && <HeroBannerOmbak />}
+      {/* HeroBannerOmbak removed */}
       <main className="max-w-[1320px] mx-auto px-4 lg:px-6 py-8"><Page /></main>
       <KalenderModal open={cal} onClose={() => setCal(false)} />
       <Chatbot />

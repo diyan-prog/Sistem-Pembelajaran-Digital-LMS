@@ -179,10 +179,10 @@ export function RowMenu({ items }: { items: { l: string; icon?: ReactNode; onCli
 
 // ---------- DataTable ----------
 export type Col<T> = { key: string; header: string; render?: (r: T) => ReactNode; sort?: (r: T) => string | number; className?: string; hideSm?: boolean }
-export function DataTable<T extends { id: string | number }>({ rows, cols, searchText, searchPlaceholder = 'Cari...', filters, pageSize = 10, selectable, bulk, actions, onRow, empty }: {
+export function DataTable<T extends { id: string | number }>({ rows, cols, searchText, searchPlaceholder = 'Cari...', filters, pageSize = 10, selectable, bulk, actions, onRow, empty, loading }: {
   rows: T[]; cols: Col<T>[]; searchText?: (r: T) => string; searchPlaceholder?: string; filters?: ReactNode; pageSize?: number; selectable?: boolean
   bulk?: { l: string; icon?: ReactNode; danger?: boolean; onClick: (ids: (string | number)[], clear: () => void) => void }[]
-  actions?: (r: T) => { l: string; icon?: ReactNode; onClick: () => void; danger?: boolean }[]; onRow?: (r: T) => void; empty?: string
+  actions?: (r: T) => { l: string; icon?: ReactNode; onClick: () => void; danger?: boolean }[]; onRow?: (r: T) => void; empty?: string; loading?: boolean
 }) {
   const [q, setQ] = useState(''); const [sort, setSort] = useState<{ k: string; d: 1 | -1 } | null>(null); const [page, setPage] = useState(1); const [sel, setSel] = useState<Set<string | number>>(new Set())
   const data = useMemo(() => {

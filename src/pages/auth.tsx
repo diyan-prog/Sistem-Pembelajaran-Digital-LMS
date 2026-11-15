@@ -30,7 +30,7 @@ export function Login() {
   const { login } = useApp(); const nav = useNavigate()
   const [id, setId] = useState(''); const [pw, setPw] = useState(''); const [show, setShow] = useState(false); const [rem, setRem] = useState(true)
   const [err, setErr] = useState(''); const [loading, setLoading] = useState<string | null>(null); const [fe, setFe] = useState<{ id?: string; pw?: string }>({})
-  const go = (r: Role) => { setLoading(r); setTimeout(() => { login(r); nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda')) }, 700) }
+  const go = (r: Role) => { setLoading(r); setTimeout(() => { login(r, null); nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda')) }, 700) }
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); const f: typeof fe = {}
     if (!id.trim()) f.id = 'NIS / NIP / Email wajib diisi'; if (pw.length < 6) f.pw = 'Kata sandi minimal 6 karakter'; setFe(f); setErr('')

@@ -2,9 +2,12 @@
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "supabase": {
-      "type": "remote",
+      "type": "remote",x
       "url": "https://mcp.supabase.com/mcp?project_ref=phtqlmidfaocacphblej&read_only=true&features=docs%2Cdatabase%2Cdebugging",
       "enabled": true
     }
-  }
+  },
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ]
 }

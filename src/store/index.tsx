@@ -35,6 +35,7 @@ type Ctx = {
   confirm: (c: NonNullable<ConfirmT>) => void
   notifs: { id: string; judul: string; waktu: string; grup: string; jenis: string; ikon: string; read: boolean }[]
   markRead: (id: string) => void; markAll: () => void
+  refreshUser: () => Promise<void>
 }
 const C = createContext<Ctx>(null as never)
 export const useApp = () => useContext(C)
@@ -42,11 +43,19 @@ export const useRole = () => ({ role: useApp().role as Role, cfg: ROLES[useApp()
 
 const notifFor = (r: Role | null) => (r === 'siswa' ? notifikasi : r === 'guru' ? notifGuru : notifUmum).map((n, i) => ({ ...n, read: i > 3 }))
 
-const supabase = createClient('https://phtqlmidfaocacphblej.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjI0NTksImV4cCI6MjEwNjQzODQ1OX0.8mlV5OrWgBJUWEzejGQHnVxsZqidwPwkq-tH3w_WNtg');
+export const supabase = createClient('https://phtqlmidfaocacphblej.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjI0NTksImV4cCI6MjEwNjQzODQ1OX0.8mlV5OrWgBJUWEzejGQHnVxsZqidwPwkq-tH3w_WNtg');
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role | null>(() => (localStorage.getItem('spd-role') as Role) || null)
-  const [userData, setUserData] = useState<any>(() => JSON.parse(localStorage.getItem('spd-user') || 'null'))
+  const [role, setRole] = useState<Role | null>(() => {
+    const stored = localStorage.getItem('spd-role')
+    if (!stored || stored === 'undefined') return null
+    return stored as Role
+  })
+  const [userData, setUserData] = useState<any>(() => {
+    const stored = localStorage.getItem('spd-user')
+    if (!stored || stored === 'undefined') return null
+    return JSON.parse(stored)
+  })
   const [toasts, setToasts] = useState<ToastT[]>([])
   const [conf, setConf] = useState<ConfirmT>(null)
   const [notifs, setNotifs] = useState(() => notifFor(role))
@@ -79,12 +88,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [handleSession]);
 
   const logout = () => { localStorage.removeItem('spd-role'); localStorage.removeItem('spd-user'); setRole(null); setUserData(null); supabase.auth.signOut(); }
+  const refreshUser = useCallback(async () => {
+    if (!userData?.id) return;
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userData.id).single();
+    if (profile) {
+      setUserData(profile);
+      localStorage.setItem('spd-user', JSON.stringify(profile));
+    }
+  }, [userData?.id]);
   const toast = useCallback((msg: string, type: ToastT['type'] = 'ok') => {
     const id = Date.now() + Math.random(); setToasts((t) => [...t, { id, msg, type }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
   }, [])
   const icons = { ok: <CheckCircle2 className="text-ok" size={20} />, err: <XCircle className="text-danger" size={20} />, info: <Info className="text-accent" size={20} />, warn: <AlertTriangle className="text-warn" size={20} /> }
   return (
-    <C.Provider value={{ role, login, logout, toast, confirm: setConf, notifs, markRead: (id) => setNotifs((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))), markAll: () => setNotifs((n) => n.map((x) => ({ ...x, read: true }))) }}>
+    <C.Provider value={{ role, userData, login, logout, toast, confirm: setConf, notifs, markRead: (id) => setNotifs((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))), markAll: () => setNotifs((n) => n.map((x) => ({ ...x, read: true }))), refreshUser }}>
       {children}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2" role="status" aria-live="polite">
         {toasts.map((t) => (

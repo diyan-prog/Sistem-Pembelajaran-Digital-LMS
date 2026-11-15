@@ -7,9 +7,41 @@ import { Avatar, Badge, Btn, Card, CardTitle, Chips, DataTable, Dropzone, Drawer
 import { useApp } from '@/store'
 import { YtThumb } from './siswa'
 import { KATEGORI_KOMENTAR, TODAY, addDays, bankSoal, fmtBatas, fmtTgl, fmtTglPendek, guruOfferings, kelasById, kuis, kuisById, kuisSoal, mediaFiles, nilaiKelas, offeringById, offeringTitle, seedStat, studentsOf, subSiswa, subjectById, tugas, tugasById, sesiOf, type Soal, type TStatus } from '@/data'
+import { fetchPengampu, getGuruOfferings, fromPengampuToOffering, type Pengampu } from '@/services/akademik'
+import { fetchTugas, fetchKuis, type Tugas, type Kuis } from '@/services/materi'
+import { fetchPresensi, createPresensi } from '@/services/presensi'
+import { useGuruData } from '@/hooks/useGuruData'
+
+// Helper for presensi data fetching
+const usePresensiData = (offId?: string) => {
+  const [presensi, setPresensi] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    if (!offId) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchPresensi(offId);
+        setPresensi(data);
+      } catch (e) {
+        console.error('Failed to fetch presensi:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [offId]);
+  
+  return { presensi, loading };
+};
 
 export function PresensiPick() {
-  const offs = guruOfferings('t1')
+  const { pengampu, loading } = useGuruData();
+  const offs = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
+  
+  if (loading) return <div className="p-8 text-center text-muted">Memuat data kelas...</div>;
+  
   return <div><PageHeader crumbs={useCrumbs({ l: 'Presensi' })} title="Presensi" subtitle="Pilih kelas untuk melihat daftar pertemuan dan mengelola presensi" />
     <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">{offs.map((o) => <Link key={o.id} to={`/guru/presensi/${o.id}`}><Card hover className="h-full"><div className="flex items-center gap-3"><span className="w-12 h-12 rounded-2xl bg-primary-light text-primary-dark flex items-center justify-center"><ClipboardCheck /></span><div><b className="block uppercase leading-snug">{offeringTitle(o)}</b><span className="text-xs text-muted">{kelasById(o.kelasId).nama} • 25 siswa</span></div></div><div className="mt-4 text-sm flex justify-between"><span className="text-muted">Pertemuan terlaksana</span><b>{o.done} / {o.total}</b></div><Progress value={(o.done / o.total) * 100} tone="green" className="mt-2" /></Card></Link>)}</div></div>
 }
@@ -68,11 +100,17 @@ export function RekapPresensi() {
 
 // ---------- Penilaian ----------
 export function Penilaian() {
-  const [sp, setSp] = useSearchParams(); const mine = tugas.filter((t) => guruOfferings('t1').some((o) => o.id === t.off) && t.gStatus !== 'Draft'); const tid = sp.get('tugas') ?? mine[0].id
+  const [sp, setSp] = useSearchParams(); const { pengampu, tugas: realTugas } = useGuruData();
+  const mineOff = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
+  const mine = realTugas.length > 0
+    ? realTugas.filter((t: any) => t.status !== 'Draft').map((t: any) => ({ ...t, off: t.id_pengampu }))
+    : tugas.filter((t) => mineOff.some((o: any) => o.id === t.off) && t.gStatus !== 'Draft');
+  const tid = sp.get('tugas') ?? (mine.length > 0 ? mine[0].id : tugas[0]?.id ?? '');
+  
   return <PenilaianInner key={tid} tid={tid} mine={mine} setTid={(v) => setSp({ tugas: v })} />
 }
 function PenilaianInner({ tid, mine, setTid }: { tid: string; mine: typeof tugas; setTid: (v: string) => void }) {
-  const t = tugasById(tid); const { toast } = useApp(); const [subs, setSubs] = useState(() => subSiswa(tid)); const [f, setF] = useState('Semua'); const [open, setOpen] = useState<string | null>(null)
+  const t = mine.find((x: any) => x.id === tid) ? mine.find((x: any) => x.id === tid)! : tugasById(tid); const { toast } = useApp(); const [subs, setSubs] = useState(() => subSiswa(tid)); const [f, setF] = useState('Semua'); const [open, setOpen] = useState<string | null>(null)
   const [nilai, setNilai] = useState(''); const [fb, setFb] = useState(''); const [err, setErr] = useState('')
   const cnt = (s: string) => subs.filter((x) => x.status === s).length; const wait = cnt('Dikumpulkan') + cnt('Terlambat')
   const rows = subs.filter((s) => f === 'Semua' || (f === 'Menunggu' ? s.status === 'Dikumpulkan' || s.status === 'Terlambat' : s.status === f))
@@ -81,7 +119,7 @@ function PenilaianInner({ tid, mine, setTid }: { tid: string; mine: typeof tugas
   const save = (next: boolean) => { const n = Number(nilai); if (nilai === '' || isNaN(n) || n < 0 || n > t.maks) return setErr(`Nilai harus antara 0 dan ${t.maks}`); const l = subs.map((s) => (s.id === open ? { ...s, nilai: n, status: 'Dinilai' as TStatus } : s)); setSubs(l); toast(`Nilai ${cur!.siswa.nama} tersimpan`)
     if (next) { const nx = l.find((s) => (s.status === 'Dikumpulkan' || s.status === 'Terlambat') && s.id !== open); if (nx) { setOpen(nx.id); setNilai(''); setFb(''); setErr('') } else { setOpen(null); toast('Semua pengumpulan sudah dinilai', 'info') } } else setOpen(null) }
   return (
-    <div><PageHeader crumbs={useCrumbs({ l: 'Penilaian' })} title="Penilaian" subtitle="Nilai pengumpulan tugas siswa dan berikan umpan balik" actions={<Select aria-label="Pilih tugas" value={tid} onChange={(e) => setTid(e.target.value)} options={mine.map((m) => ({ v: m.id, l: `${m.judul} — ${kelasById(offeringById(m.off).kelasId).nama}` }))} className="w-96 max-w-full" />} />
+    <div><PageHeader crumbs={useCrumbs({ l: 'Penilaian' })} title="Penilaian" subtitle="Nilai pengumpulan tugas siswa dan berikan umpan balik" actions={<Select aria-label="Pilih tugas" value={tid} onChange={(e) => setTid(e.target.value)} options={mine.map((m: any) => ({ v: m.id, l: `${m.judul} — ${kelasById(offeringById(m.off).kelasId).nama}` }))} className="w-96 max-w-full" />} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">{[['Total Siswa', subs.length, 'text-ink'], ['Belum Mengumpulkan', cnt('Belum Dikumpulkan'), 'text-muted'], ['Menunggu Dinilai', wait, 'text-accent'], ['Sudah Dinilai', cnt('Dinilai'), 'text-primary-dark']].map(([l, v, c]) => <Card key={l as string} className="!p-4"><div className="text-sm text-muted font-semibold">{l}</div><div className={cn('text-3xl font-extrabold', c as string)}>{v}</div></Card>)}</div>
       <DataTable rows={rows} pageSize={10} searchText={(r) => r.siswa.nama} searchPlaceholder="Cari nama siswa" onRow={(r) => openRow(r.id)} filters={<Chips value={f} onChange={setF} options={[{ k: 'Semua', l: 'Semua' }, { k: 'Menunggu', l: 'Menunggu Dinilai' }, { k: 'Dinilai', l: 'Dinilai' }, { k: 'Belum Dikumpulkan', l: 'Belum' }]} />}
         cols={[{ key: 'siswa', header: 'Siswa', sort: (r) => r.siswa.nama, render: (r) => <NameCell name={r.siswa.nama} sub={`NIS ${r.siswa.nis}`} /> }, { key: 'berkas', header: 'Berkas', render: (r) => r.berkas === '-' ? <span className="text-muted">-</span> : <span className="flex items-center gap-1.5 text-accent"><FileText size={15} />{r.berkas}</span> }, { key: 'waktu', header: 'Waktu Kumpul' }, { key: 'status', header: 'Status', render: (r) => <StatusBadge s={r.status} /> }, { key: 'nilai', header: 'Nilai', sort: (r) => r.nilai ?? -1, render: (r) => <b>{r.nilai ?? '-'}</b> }]}
@@ -144,7 +182,12 @@ export function RekapNilaiKelas() {
   )
 }
 export function RekapNilaiPick() {
-  return <div><PageHeader crumbs={useCrumbs({ l: 'Rekap Nilai' })} title="Rekap Nilai Kelas" subtitle="Pilih kelas" /><div className="grid md:grid-cols-2 gap-5">{guruOfferings('t1').map((o) => <Link key={o.id} to={`/guru/rekap-nilai/${o.id}`}><Card hover><b className="uppercase">{offeringTitle(o)}</b><div className="text-sm text-muted mt-1">Rata-rata nilai {o.rata}</div></Card></Link>)}</div></div>
+  const { pengampu, loading } = useGuruData();
+  const offs = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
+  
+  if (loading) return <div className="p-8 text-center text-muted">Memuat data kelas...</div>;
+  
+  return <div><PageHeader crumbs={useCrumbs({ l: 'Rekap Nilai' })} title="Rekap Nilai Kelas" subtitle="Pilih kelas" /><div className="grid md:grid-cols-2 gap-5">{offs.map((o) => <Link key={o.id} to={`/guru/rekap-nilai/${o.id}`}><Card hover><b className="uppercase">{offeringTitle(o)}</b><div className="text-sm text-muted mt-1">Rata-rata nilai {o.rata}</div></Card></Link>)}</div></div>
 }
 
 // ---------- Media Library ----------
@@ -152,6 +195,9 @@ export function MediaLibrary() {
   const { toast, confirm } = useApp(); const [files, setFiles] = useState(mediaFiles); const [q, setQ] = useState(''); const [t, setT] = useState('semua'); const [up, setUp] = useState(false)
   const list = files.filter((f) => (t === 'semua' || f.tipe === t) && f.nama.toLowerCase().includes(q.toLowerCase()))
   const ytMap: Record<string, string> = { f4: 'qz0aGYrrlhU', f7: 'UB1O30fR-EE' }
+  
+  // MediaLibrary still uses local state since file upload requires storage integration
+  // which needs Supabase Storage configuration. The dummy data provides a functional UI.
   return (
     <div><PageHeader crumbs={useCrumbs({ l: 'Media Library' })} title="Media Library" subtitle="Dokumen, gambar, dan tautan YouTube yang pernah Anda unggah" actions={<Btn icon={<Upload size={18} />} onClick={() => setUp(true)}>Unggah Berkas</Btn>} />
       <div className="flex flex-wrap gap-3 mb-5"><SearchBar value={q} onChange={setQ} placeholder="Cari berkas" className="w-80 max-w-full" /><Chips value={t} onChange={setT} options={[{ k: 'semua', l: 'Semua', n: files.length }, { k: 'dokumen', l: 'Dokumen' }, { k: 'gambar', l: 'Gambar' }, { k: 'youtube', l: 'YouTube' }]} /></div>

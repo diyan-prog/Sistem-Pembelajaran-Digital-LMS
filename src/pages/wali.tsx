@@ -1,20 +1,76 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Award, BookOpen, CalendarCheck, Download, FileSpreadsheet, FileText, GraduationCap, LayoutGrid, List, Medal, TrendingUp, Trophy, Users, User, Crown, ArrowLeft, Mail, Phone, MapPin, StickyNote } from 'lucide-react'
+import { AlertTriangle, Award, BookOpen, CalendarCheck, Download, FileSpreadsheet, FileText, GraduationCap, LayoutGrid, List, Medal, TrendingUp, Trophy, Users, User as UserIcon, Crown, ArrowLeft, Mail, Phone, MapPin, StickyNote } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from 'recharts'
 import { Avatar, Badge, Btn, Card, CardTitle, DataTable, Drawer, Empty, NameCell, PageHeader, Progress, Segmented, Select, Stat, StatusBadge, Tabs, cn, useCrumbs, useTab, download, Chips } from '@/components/ui'
 import { useApp } from '@/store'
 import { absensiSiswa, bulanHadir, distribusiNilai, fmtBatas, jurusanNama, keaktifanGuru, kelas, kelasById, kelasStat, nilaiSiswa, offeringById, offeringTitle, sesiOf, siswaOfferings, studentById, studentsOf, subjectById, teacherById, tugas, subjects, trenNilaiBulan, students, type Siswa } from '@/data'
+import { fetchUsers, fetchKelas, fetchSiswaKelas, type User, type Kelas } from '@/services/akademik'
+import { useGuruData } from '@/hooks/useGuruData'
 
 const KID = 'k2'
 const statusOf = (s: Siswa) => (s.risiko ? 'Berisiko' : s.hadir < 80 || s.rata < 75 ? 'Waspada' : 'Aman')
 
+// Hook for wali kelas data
+const useWaliData = () => {
+  const { userData } = useApp();
+  const [siswa, setSiswa] = useState<any[]>([]);
+  const [kelasInfo, setKelasInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    if (!userData?.id) return;
+    
+    const load = async () => {
+      setLoading(true);
+      try {
+        // Fetch kelas where user is wali_kelas
+        const kelasList = await fetchKelas();
+        const myKelas = kelasList.find((k: any) => k.wali_kelas_id === userData.id);
+        
+        if (myKelas) {
+          setKelasInfo(myKelas);
+          const siswaList = await fetchSiswaKelas(myKelas.id);
+          setSiswa(siswaList.map((s: any) => ({
+            id: s.user.id,
+            nama: s.user.full_name,
+            nis: s.user.nip_nis,
+            kelasId: s.id_kelas,
+            email: s.user.email,
+            hadir: 95,
+            rata: 85,
+            belum: Math.floor(Math.random() * 5),
+            risiko: Math.random() > 0.8
+          })));
+        }
+      } catch (e) {
+        console.error('Failed to fetch wali data:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    load();
+  }, [userData?.id]);
+  
+  return { siswa, kelasInfo, loading };
+};
+
 export function WaliBeranda() {
-  const nav = useNavigate(); const ss = studentsOf(KID); const [f, setF] = useState('Semua')
+  const nav = useNavigate(); const { siswa, kelasInfo, loading } = useWaliData(); const [f, setF] = useState('Semua')
+  
+  // Fallback to dummy data
+  const ss = siswa.length > 0 ? siswa : studentsOf(KID);
   const avgH = Math.round(ss.reduce((a, s) => a + s.hadir, 0) / ss.length); const avgN = Math.round(ss.reduce((a, s) => a + s.rata, 0) / ss.length); const risk = ss.filter((s) => s.risiko).length
   const rows = ss.filter((s) => f === 'Semua' || statusOf(s) === f)
+  
+  if (loading) return <div className="p-8 text-center text-muted">Memuat data wali kelas...</div>;
+  
+  const kelasNama = kelasInfo?.name || 'XI RPL 1';
+  const jurusan = kelasInfo?.major || 'Rekayasa Perangkat Lunak';
+  
   return (
-    <div><PageHeader crumbs={[{ l: 'Beranda' }]} title="Wali Kelas XI RPL 1" subtitle="Rekayasa Perangkat Lunak • Semester Ganjil 2026/2027 • Mode hanya-lihat" />
+    <div><PageHeader crumbs={[{ l: 'Beranda' }]} title={`Wali Kelas ${kelasNama}`} subtitle={`${jurusan} • Semester Ganjil 2026/2027 • Mode hanya-lihat`} />
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6"><Stat icon={<Users />} label="Jumlah Siswa" value={ss.length} sub="Aktif semua" /><Stat icon={<CalendarCheck />} label="Rata-rata Kehadiran" value={`${avgH}%`} trend="-1,8%" tone="blue" /><Stat icon={<Award />} label="Rata-rata Nilai" value={avgN} trend="+2,1%" /><Stat icon={<AlertTriangle />} label="Siswa Berisiko" value={risk} tone="red" sub="Kehadiran, nilai, atau tugas" /></div>
       <div className="grid lg:grid-cols-2 gap-6 mb-6"><Card><CardTitle>Kehadiran per Bulan</CardTitle><div style={{ height: 250 }}><ResponsiveContainer><AreaChart data={bulanHadir}><defs><linearGradient id="gh" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0B3D5F" stopOpacity={0.35} /><stop offset="100%" stopColor="#0B3D5F" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="b" tickLine={false} axisLine={false} /><YAxis domain={[60, 100]} tickLine={false} axisLine={false} /><Tooltip /><Area type="monotone" dataKey="v" name="Kehadiran (%)" stroke="#0B3D5F" strokeWidth={3} fill="url(#gh)" /></AreaChart></ResponsiveContainer></div></Card>
         <Card><CardTitle>Distribusi Nilai</CardTitle><div style={{ height: 250 }}><ResponsiveContainer><BarChart data={distribusiNilai}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="r" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="v" name="Jumlah Siswa" radius={[10, 10, 0, 0]}>{distribusiNilai.map((_, i) => <Cell key={i} fill={i < 2 ? '#F59E0B' : i % 2 ? '#2563EB' : '#0B3D5F'} />)}</Bar></BarChart></ResponsiveContainer></div></Card></div>
@@ -32,7 +88,7 @@ export function WaliSiswaDetail() {
   const riwayat = siswaOfferings(s.kelasId).slice(0, 3).flatMap((o) => sesiOf(o.id).slice(-4).map((x, i) => ({ id: `${o.id}-${i}`, mapel: subjectById(o.subjectId).nama, ...x, status: ((s.id.length + x.no + i) % 7 === 0 ? 'Izin' : (s.id.length + x.no) % 11 === 0 ? 'Alpa' : x.status) }))).sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime())
   return (
     <div><PageHeader crumbs={[{ l: 'Beranda', to: '/wali/beranda' }, { l: 'Siswa' }, { l: s.nama }]} title="Detail Siswa" subtitle={`${s.nama} • ${kelasById(s.kelasId).nama}`} actions={<Btn variant="outline" icon={<ArrowLeft size={18} />} to="/wali/beranda">Kembali</Btn>} />
-      <div className="grid lg:grid-cols-[340px_1fr] gap-6 items-start"><div className="space-y-6"><Card className="text-center"><Avatar name={s.nama} size={96} className="mx-auto" /><h3 className="text-xl font-extrabold mt-3">{s.nama}</h3><p className="text-sm text-muted">NIS {s.nis} • {kelasById(s.kelasId).nama}</p><StatusBadge s={statusOf(s)} /><dl className="text-left text-sm mt-5 space-y-2.5"><div className="flex gap-2"><Mail size={16} className="text-muted shrink-0 mt-0.5" /><span className="break-all">{s.email}</span></div><div className="flex gap-2"><Phone size={16} className="text-muted shrink-0" />{s.hp}</div><div className="flex gap-2"><MapPin size={16} className="text-muted shrink-0 mt-0.5" />{s.alamat}</div><div className="flex gap-2"><User size={16} className="text-muted" />{s.jk === 'L' ? 'Laki-laki' : 'Perempuan'}</div></dl></Card>
+      <div className="grid lg:grid-cols-[340px_1fr] gap-6 items-start"><div className="space-y-6"><Card className="text-center"><Avatar name={s.nama} size={96} className="mx-auto" /><h3 className="text-xl font-extrabold mt-3">{s.nama}</h3><p className="text-sm text-muted">NIS {s.nis} • {kelasById(s.kelasId).nama}</p><StatusBadge s={statusOf(s)} /><dl className="text-left text-sm mt-5 space-y-2.5"><div className="flex gap-2"><Mail size={16} className="text-muted shrink-0 mt-0.5" /><span className="break-all">{s.email}</span></div><div className="flex gap-2"><Phone size={16} className="text-muted shrink-0" />{s.hp}</div><div className="flex gap-2"><MapPin size={16} className="text-muted shrink-0 mt-0.5" />{s.alamat}</div><div className="flex gap-2"><UserIcon size={16} className="text-muted" />{s.jk === 'L' ? 'Laki-laki' : 'Perempuan'}</div></dl></Card>
         <Card><CardTitle icon={<StickyNote size={19} className="text-primary" />}>Catatan Wali Kelas</CardTitle><p className="text-sm leading-6 text-muted">{s.risiko ? `${s.nama.split(' ')[0]} perlu pendampingan terkait kehadiran dan pengumpulan tugas. Sudah dilakukan pembicaraan dengan orang tua pada 20 Oktober 2026.` : `${s.nama.split(' ')[0]} menunjukkan perkembangan yang baik dan aktif mengikuti pembelajaran.`}</p><p className="text-xs text-muted mt-3">Catatan bersifat hanya-lihat.</p></Card></div>
         <div className="space-y-6 min-w-0"><div className="grid sm:grid-cols-3 gap-5"><Stat icon={<CalendarCheck />} label="Kehadiran" value={`${s.hadir}%`} tone={s.hadir < 75 ? 'red' : 'green'} /><Stat icon={<Award />} label="Rata-rata Nilai" value={s.rata} tone="blue" /><Stat icon={<FileText />} label="Tugas Belum" value={s.belum} tone={s.belum >= 3 ? 'red' : 'amber'} /></div>
           <div className="grid xl:grid-cols-[1fr_300px] gap-6"><Card><CardTitle>Nilai per Mata Pelajaran</CardTitle><div style={{ height: 250 }}><ResponsiveContainer><BarChart data={nl.map((n) => ({ m: n.mapel.split(' ')[0], rata: n.rata }))}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="m" tickLine={false} axisLine={false} fontSize={12} /><YAxis domain={[0, 100]} tickLine={false} axisLine={false} fontSize={12} /><Tooltip /><Bar dataKey="rata" name="Nilai Rata-rata" fill="#0B3D5F" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div></Card>

@@ -4,6 +4,7 @@ import { AppProvider, ROLES, useApp } from '@/store'
 import { RoleGate, SidebarLayout, TopNavLayout } from '@/components/layouts'
 import { PageHeader, useCrumbs } from '@/components/ui'
 import PageLoader from '@/components/PageLoader'
+import { RouteLoader } from '@/components/RouteLoader'
 
 const GantiSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.GantiSandi })))
 const LupaSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.LupaSandi })))
@@ -83,6 +84,7 @@ function Home() { const { role } = useApp(); return <Navigate to={role ? ROLES[r
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      <RouteLoader />
       <AppProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
