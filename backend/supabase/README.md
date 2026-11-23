@@ -1,55 +1,56 @@
-# Supabase Local Development
+# Supabase — Database dan Edge Function
 
-Folder ini berisi konfigurasi, migrasi, dan data contoh untuk database project **LMS SMK Negeri 2 Indramayu**.
+Folder ini berisi konfigurasi, migrasi, seed, dan Edge Function untuk project Supabase LMS SMK Negeri 2 Indramayu.
 
-## Struktur Folder
-- `config.toml`: Konfigurasi dasar Supabase CLI (port, auth, api).
-- `migrations/`: Script SQL untuk membuat schema database.
-- `seed.sql`: Data contoh (projects, skills, messages).
+## Struktur
 
-## Persiapan
-Pastikan sudah install [Supabase CLI](https://supabase.com/docs/guides/cli).
-Project Reference: `phtqlmidfaocacphblej`
+- `config.toml` — konfigurasi Supabase CLI (API, database, Studio, Auth, Storage).
+- `migrations/` — skema PostgreSQL, RLS, view, fungsi, dan trigger.
+- `seed.sql` — data contoh untuk jurusan, tahun ajaran, kelas, dan mata pelajaran.
+- `functions/admin-users/` — Edge Function untuk operasi istimewa pengguna.
 
-## Perintah Penting (JANGAN dijalankan sembarangan)
+## Prasyarat
 
-### 1. Login & Inisialisasi
+- Supabase CLI
+- Akses ke project Supabase tujuan
+- Cadangan database sebelum `db push`
+
+Jalankan perintah dari root repo dengan flag `--workdir backend`.
+
+## Perintah
+
 ```bash
-# Login ke akun Supabase
-supabase login
+supabase --workdir backend login
+supabase --workdir backend link --project-ref <project-ref>
 
-# Hubungkan dengan project remote
-supabase link --project-ref phtqlmidfaocacphblej
+# tinjau migrasi sebelum mengubah database remote
+supabase --workdir backend db push
+
+# jalankan stack lokal
+supabase --workdir backend start
+
+# perbarui tipe TypeScript frontend
+supabase --workdir backend gen types typescript --linked > frontend/src/types/database.types.ts
 ```
 
-### 2. Sinkronisasi Schema (Migration)
+Seed tidak dijalankan otomatis oleh `db push`. Untuk mengisi data contoh, jalankan isi `seed.sql` melalui SQL Editor atau `psql`.
+
+## Edge Function `admin-users`
+
+Fungsi ini menangani pembuatan pengguna Auth, perubahan role, perubahan status, dan reset kata sandi. Frontend memanggilnya melalui `frontend/src/services/admin.ts`.
+
 ```bash
-# Jalankan migrasi ke project remote yang sudah di-link
-# PERINGATAN: Ini akan mengubah schema di database remote.
-supabase db push
+supabase --workdir backend functions deploy admin-users
 ```
 
-### 3. Sinkronisasi Data (Seed)
-Migrasi hanya membawa schema (tabel/fungsi). Untuk mengisi data dari `seed.sql` ke database remote:
-1. Copy isi `seed.sql`.
-2. Buka **Supabase Dashboard** > **SQL Editor**.
-3. Paste dan jalankan query tersebut.
-4. **Catatan**: Data di `seed.sql` didesain idempotent (`on conflict do nothing`).
+Fungsi membutuhkan environment server berikut:
 
-## Penting: Cara Membuat User Admin
-1. Buka **Authentication** > **Users** di Supabase Dashboard.
-2. Klik **Add User** > masukkan email & password.
-3. Setelah user dibuat, copy **User UUID**.
-4. Buka **SQL Editor**, jalankan query berikut:
-```sql
-insert into public.profiles (id, full_name, role)
-values ('<COPAS-UUID-USER-DI-SINI>', 'Nama Admin', 'admin');
-```
-5. User tersebut sekarang memiliki hak akses admin untuk CRUD Projects & Skills.
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-## Tabel & RLS Ringkasan
-- `profiles`: User management & roles.
-- `projects`: Data karya/proyek (Select: public, Manage: admin).
-- `skills`: Daftar keahlian (Select: public, Manage: admin).
-- `messages`: Inbox pesan kontak (Insert: anon, Select/Manage: admin).
-- `message_replies`: Balasan pesan dari admin.
+Service-role key hanya boleh berada di environment server. Jangan pernah memasukkannya ke `frontend/.env` atau variabel `VITE_*`.
+
+## Peringatan
+
+`db push` mengubah skema database remote. Tinjau migrasi dan buat cadangan terlebih dahulu. Service-role key yang pernah tercatat di riwayat Git harus dirotasi di dashboard Supabase.

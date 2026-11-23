@@ -16,7 +16,7 @@ flowchart LR
         R[React Router 7<br/>route per peran]
         L[Layout<br/>TopNav / Sidebar]
         P[Halaman per peran<br/>siswa · guru · wali · kepsek · tu]
-        S[Service Layer<br/>src/services/*.ts]
+        S[Service Layer<br/>frontend/src/services/*.ts]
         H[Hooks<br/>useGuruData · useRealtime]
         C[AppProvider<br/>sesi · role · toast · notifikasi]
     end
@@ -25,6 +25,7 @@ flowchart LR
         A[Supabase Auth<br/>email + password]
         API[PostgREST<br/>/rest/v1]
         RT[Realtime<br/>postgres_changes]
+        FN[Edge Function<br/>admin-users]
         DB[(PostgreSQL<br/>skema public + RLS)]
     end
 
@@ -40,17 +41,20 @@ flowchart LR
     H --> RT
     C --> A
     C --> API
+    S --> FN
     API --> DB
     RT --> DB
+    FN --> DB
 ```
 
 Prinsip utamanya:
 
 - **Satu aplikasi, lima peran.** Semua peran memakai bundel frontend yang sama; akses dibatasi oleh route guard dan RLS database.
-- **Frontend tanpa backend perantara.** Komponen memanggil Supabase langsung lewat `supabase-js` atau REST API.
-- **Service layer tipis.** Query Supabase dibungkus fungsi di `src/services` agar halaman tidak menulis query yang sama berulang.
+- **Frontend tanpa backend perantara untuk operasi biasa.** Komponen memanggil Supabase langsung lewat `supabase-js` atau REST API.
+- **Operasi istimewa lewat Edge Function.** Pembuatan pengguna, perubahan role/status, dan reset password dijalankan oleh `admin-users`, bukan dari browser dengan service-role key.
+- **Service layer tipis.** Query Supabase dibungkus fungsi di `frontend/src/services` agar halaman tidak menulis query yang sama berulang.
 - **Konteks global untuk sesi.** `AppProvider` menyimpan role, profil pengguna, toast, dialog konfirmasi, dan notifikasi.
-- **Data contoh di frontend.** Banyak tampilan masih memakai data dummy dari `src/data/index.ts`; sebagian modul sudah terhubung ke database.
+- **Data contoh terpisah.** Tampilan yang belum terhubung database memakai data dari `frontend/src/mocks/index.ts`.
 
 ---
 
@@ -65,7 +69,7 @@ Prinsip utamanya:
 | Ikon | `lucide-react` |
 | Grafik | `recharts` |
 | QR | `qrcode.react` |
-| Backend | Supabase (Auth, PostgREST, Realtime, PostgreSQL) |
+| Backend | Supabase (Auth, PostgREST, Realtime, Edge Functions, PostgreSQL) |
 | Format | `oxfmt` |
 | Runtime | Node.js 22, pnpm 10 |
 
@@ -75,45 +79,52 @@ Prinsip utamanya:
 
 ```text
 .
-├── index.html                  # Shell Vite, elemen #root
-├── vite.config.ts              # React, Tailwind, alias @ -> src, plugin Figma Make
-├── src
-│   ├── main.tsx                # Entrypoint React
-│   ├── App.tsx                 # Router, lazy loading, pembagian route per peran
-│   ├── index.css               # Import Tailwind v4 + tema global
-│   ├── components
-│   │   ├── layouts/index.tsx   # RoleGate, TopNavLayout, SidebarLayout, menu pengguna
-│   │   ├── ui/index.tsx        # Komponen UI bersama (Card, DataTable, Modal, dll.)
-│   │   ├── PageLoader.tsx      # Loader halaman
-│   │   ├── RouteLoader.tsx     # Loader saat perpindahan route
-│   │   └── Chatbot.tsx         # EduBot, chatbot berbasis pencarian data
-│   ├── pages
-│   │   ├── login.tsx           # Login Supabase Auth
-│   │   ├── auth.tsx            # Lupa sandi, ganti sandi, 404
-│   │   ├── siswa.tsx           # Modul siswa
-│   │   ├── guru1.tsx           # Modul guru: kelas, materi, tugas, kuis
-│   │   ├── guru2.tsx           # Modul guru: presensi, penilaian, bank soal, media
-│   │   ├── wali.tsx            # Modul wali kelas
-│   │   ├── tu.tsx              # Modul tata usaha / master data
-│   │   └── shared.tsx          # Halaman lintas peran: akun, pengumuman, jadwal, dll.
-│   ├── services                # Akses data ke Supabase
-│   │   ├── akademik.ts         # Profil, kelas, mapel, pengampu, siswa-kelas, jurusan
-│   │   ├── materi.ts           # Pertemuan, materi, tugas, kuis, soal, hasil
-│   │   ├── presensi.ts         # Presensi, rekap, pengumuman, notifikasi, log, pengaturan
-│   │   ├── pengumuman.ts       # CRUD pengumuman
-│   │   ├── profil.ts           # Baca/ubah profil sendiri
-│   │   └── siswa.ts            # Query khusus siswa
-│   ├── hooks
-│   │   ├── useGuruData.ts      # Muat pengampu, tugas, kuis milik guru
-│   │   └── useRealtime.ts      # Langganan perubahan tabel (belum dipakai luas)
-│   ├── store/index.tsx         # AppProvider, useApp, useRole, ROLES, klien Supabase
-│   └── data/index.ts           # Data dummy terpusat + helper tampilan
-├── supabase
-│   ├── config.toml
-│   ├── migrations/             # Skema PostgreSQL, RLS, view, trigger
-│   └── seed.sql
-└── docs/superpowers/plans/     # Catatan rencana implementasi
+├── frontend
+│   ├── index.html                  # Shell Vite, elemen #root
+│   ├── vite.config.ts              # React, Tailwind, alias @ -> frontend/src
+│   ├── .env.example                # Contoh variabel Supabase
+│   ├── public/                     # Aset statis
+│   └── src
+│       ├── main.tsx                # Entrypoint React
+│       ├── App.tsx                 # Router, lazy loading, route per peran
+│       ├── index.css               # Import Tailwind v4 + tema global
+│       ├── components
+│       │   ├── chatbot/            # EduBot
+│       │   ├── layouts/            # RoleGate, TopNavLayout, SidebarLayout
+│       │   ├── loaders/            # PageLoader, RouteLoader
+│       │   └── ui/                 # Primitif UI bersama
+│       ├── context/index.tsx       # AppProvider, useApp, useRole
+│       ├── hooks
+│       │   ├── useGuruData.ts      # Pengampu, tugas, kuis milik guru
+│       │   └── useRealtime.ts      # Langganan perubahan tabel
+│       ├── lib
+│       │   ├── roles.ts            # Konfigurasi role dan menu
+│       │   └── supabase.ts         # Klien Supabase dari environment
+│       ├── mocks/index.ts          # Data contoh + helper tampilan
+│       ├── pages
+│       │   ├── auth/               # Login, lupa/ganti sandi, 404
+│       │   ├── guru/               # Modul guru
+│       │   ├── siswa/              # Modul siswa
+│       │   ├── wali/               # Wali kelas dan kepala sekolah
+│       │   ├── tu/                 # Tata usaha / master data
+│       │   └── shared/             # Halaman lintas peran
+│       ├── services                # Akses data ke Supabase
+│       ├── types/database.types.ts # Tipe skema Supabase
+│       └── utils/                  # Helper kecil
+├── backend
+│   ├── README.md
+│   └── supabase
+│       ├── config.toml
+│       ├── migrations/             # Skema PostgreSQL, RLS, view, trigger
+│       ├── functions/admin-users/  # Edge Function operasi istimewa
+│       └── seed.sql
+├── docs
+│   └── plans/                      # Catatan rencana implementasi
+├── .figma/make/site.json           # Konfigurasi plugin Figma Make
+└── README.md
 ```
+
+`frontend/src/utils` dipertahankan karena masih dipakai kode yang ada, tetapi tidak termasuk struktur target awal.
 
 ---
 
@@ -121,12 +132,10 @@ Prinsip utamanya:
 
 ### 4.1 Entrypoint dan bootstrap
 
-1. `index.html` memuat `src/main.tsx`.
-2. `main.tsx` memasang `src/App.tsx` ke `#root` dalam `React.StrictMode`.
+1. `frontend/index.html` memuat `frontend/src/main.tsx`.
+2. `main.tsx` memasang `App.tsx` ke `#root` dalam `React.StrictMode`.
 3. `App.tsx` membungkus aplikasi dengan `BrowserRouter` dan `AppProvider`.
 4. Semua halaman per peran dimuat malas (`React.lazy`) dan ditampilkan di balik `Suspense` dengan `PageLoader`.
-
-Halaman juga dipecah per modul, sehingga bundel awal tidak memuat seluruh fitur.
 
 ### 4.2 Routing dan kontrol akses
 
@@ -154,16 +163,15 @@ Pembatasan ini hanya lapisan UI. Otorisasi sebenarnya tetap bergantung pada kebi
 
 ### 4.3 Layout
 
-- `TopNavLayout` — header gelap bergaya ombak, menu horizontal, notifikasi, menu akun, kalender, chatbot. Dipakai siswa, guru, wali, dan kepala sekolah.
+- `TopNavLayout` — header gelap, menu horizontal, notifikasi, menu akun, kalender, chatbot. Dipakai siswa, guru, wali, dan kepala sekolah.
 - `SidebarLayout` — sidebar bergrup untuk master data, akademik, pengguna, dan sistem. Dipakai tata usaha.
-- `Page` di dalam layout menangani transisi dan skeleton loading saat pindah route.
-- `Chatbot` (EduBot) tampil di kedua layout. Chatbot mencari daftar mata pelajaran dan kelas dari tabel `mapel`/`kelas` lalu memberi jawaban berbasis aturan.
+- `components/loaders` menangani loader awal dan transisi route.
+- `components/chatbot` (EduBot) tampil di kedua layout. Chatbot mencari daftar mata pelajaran dan kelas dari tabel `mapel`/`kelas` lalu memberi jawaban berbasis aturan.
 
 ### 4.4 State global
 
-`src/store/index.tsx` menyediakan:
+`frontend/src/context/index.tsx` menyediakan:
 
-- `supabase` — instance klien tunggal.
 - `role`, `userData`, `login()`, `logout()`, `refreshUser()`.
 - `toast()`, dialog `confirm()`.
 - Daftar notifikasi contoh dan penandaan sudah dibaca.
@@ -172,20 +180,21 @@ Sesi dipulihkan dari `localStorage` (`spd-role`, `spd-user`) dan diverifikasi ul
 
 ### 4.5 Halaman
 
-| File | Tanggung jawab |
+| Folder | Tanggung jawab |
 |---|---|
-| `pages/siswa.tsx` | Beranda, kelas, materi, tugas, kuis, nilai, kehadiran |
-| `pages/guru1.tsx` | Beranda guru, kelas, materi, tugas, daftar siswa |
-| `pages/guru2.tsx` | Presensi, sesi presensi, penilaian, bank soal, rekap, media |
-| `pages/wali.tsx` | Beranda wali, kelas perwalian, detail siswa, rekap nilai/kehadiran |
-| `pages/tu.tsx` | Dashboard, master data, jadwal, penugasan guru, tahun ajaran, pengguna, log |
-| `pages/shared.tsx` | Akun, pengumuman, jadwal, notifikasi, panduan, pengaturan |
-| `pages/login.tsx` | Login email/password ke Supabase Auth |
-| `pages/auth.tsx` | Lupa sandi, ganti sandi, halaman 404 |
+| `pages/auth` | Login, lupa sandi, ganti sandi, 404 |
+| `pages/siswa` | Beranda, kelas, materi, tugas, kuis, nilai, kehadiran |
+| `pages/guru` | Beranda guru, kelas, materi, tugas, kuis, presensi, penilaian, bank soal, rekap, media |
+| `pages/wali` | Beranda wali, kelas perwalian, detail siswa, rekap nilai/kehadiran |
+| `pages/wali/kepsek-*` | Beranda, statistik, keaktifan guru, laporan kepala sekolah |
+| `pages/tu` | Dashboard, master data, jadwal, penugasan guru, tahun ajaran, pengguna, log |
+| `pages/shared` | Akun, pengumuman, jadwal, notifikasi, panduan, pengaturan |
+
+Barrel `index.ts` pada setiap folder mempertahankan nama ekspor yang dipakai `App.tsx`.
 
 Banyak halaman menggabungkan dua sumber data:
 
-- **Data dummy** dari `src/data/index.ts` untuk tampilan yang belum dimigrasi.
+- **Data dummy** dari `frontend/src/mocks/index.ts` untuk tampilan yang belum dimigrasi.
 - **Data Supabase** lewat service atau query langsung untuk modul yang sudah terhubung.
 
 ### 4.6 Komponen UI bersama
@@ -204,32 +213,31 @@ Service membungkus operasi Supabase dan melempar `error` agar dapat ditangkap ha
 |---|---|---|
 | `akademik.ts` | `profiles`, `classes`, `subjects`, `pengampu`, `siswa_kelas`, `jurusan`, `activity_log` | Baca, tambah, ubah, hapus master data; statistik; mapping ke bentuk `Offering` |
 | `materi.ts` | `pertemuan`, `materi`, `tugas`, `pengumpulan_tugas`, `kuis`, `soal_kuis`, `hasil_kuis` | CRUD materi, tugas, kuis, pengumpulan, penilaian |
-| `presensi.ts` | `presensi`, `v_rekap_kehadiran`, `v_rekap_nilai`, `pengumuman`, `notifikasi`, `activity_log`, `pengaturan`, `tahun_ajaran` | Presensi, rekap, pengumuman, notifikasi, log, pengaturan |
+| `presensi.ts` | `presensi`, `v_rekap_kehadiran`, `v_rekap_nilai`, `notifikasi`, `activity_log`, `pengaturan`, `tahun_ajaran` | Presensi, rekap, notifikasi, log, pengaturan |
 | `pengumuman.ts` | `pengumuman` | CRUD pengumuman dengan filter role |
-| `profil.ts` | `profiles` | Baca profil, ubah field yang diizinkan (`full_name`, `hp`, `alamat`, `preferensi`) |
+| `profil.ts` | `profiles` | Baca profil, ubah field yang diizinkan |
 | `siswa.ts` | `siswa_kelas`, `classes`, `pengampu`, `subjects`, `tugas`, `pengumpulan_tugas`, `presensi` | Query kelas, tugas, dan presensi siswa |
+| `admin.ts` | Edge Function `admin-users` | Buat pengguna, ubah role/status, reset password |
 
 Pola umum fungsi: `fetch*`, `create*`, `update*`, `delete*`, dengan tipe TypeScript di file yang sama.
+
+`frontend/src/types/database.types.ts` menyimpan tipe `Database` hasil pembangkitan skema Supabase. File ini dapat diperbarui dengan perintah pada bagian 9.3.
 
 ### 5.2 Query langsung dari komponen
 
 Beberapa modul belum sepenuhnya lewat service:
 
-- `pages/siswa.tsx` memakai `supabase.from('tugas')`, `supabase.from('kuis')`, dan langganan realtime langsung.
-- `components/Chatbot.tsx` memakai `supabase.from('mapel')` dan `supabase.from('kelas')`.
-- `store/index.tsx` membaca `profiles` saat sesi berubah.
+- `pages/siswa/beranda.tsx` memakai query langsung dan langganan realtime untuk pengumuman.
+- `components/chatbot` memakai `supabase.from('mapel')` dan `supabase.from('kelas')`.
+- `context/index.tsx` membaca `profiles` saat sesi berubah.
 
 Query langsung ini membuat lapisan akses data belum seragam. Migrasi berikutnya sebaiknya memindahkannya ke service.
 
 ### 5.3 Realtime
 
-`src/hooks/useRealtime.ts` menyediakan langganan generik `postgres_changes` untuk satu tabel dengan filter opsional. Implementasi saat ini juga memasang channel langsung di `pages/siswa.tsx` untuk tabel `tugas`, `kuis`, dan `pengumuman`.
+`frontend/src/hooks/useRealtime.ts` menyediakan langganan generik `postgres_changes` untuk satu tabel dengan filter opsional. Callback disimpan di ref agar perubahan render tidak memicu langganan ulang; channel dibersihkan saat unmount.
 
-Konsekuensi:
-
-- Perubahan data dari guru dapat muncul di sisi siswa tanpa refresh.
-- Setiap komponen pemasang channel wajib membersihkan channel saat unmount.
-- Perlu perhatian pada biaya koneksi dan jumlah channel jika fitur realtime diperluas.
+Halaman pengumuman dan beranda siswa masih memasang channel langsung. Setiap komponen pemasang channel wajib membersihkan channel saat unmount.
 
 ---
 
@@ -238,8 +246,8 @@ Konsekuensi:
 ### 6.1 Alur login
 
 1. Pengguna mengisi email dan password di `/login`.
-2. `pages/login.tsx` memanggil endpoint Supabase Auth `POST /auth/v1/token?grant_type=password`.
-3. Setelah token diterima, aplikasi mengambil role pengguna dari tabel `profiles`.
+2. `pages/auth/login.tsx` memanggil `supabase.auth.signInWithPassword()`.
+3. Setelah sesi diterima, aplikasi mengambil role pengguna dari tabel `profiles`.
 4. Role dipetakan ke salah satu nilai UI: `siswa`, `guru`, `wali`, `kepsek`, `tu`.
 5. `login()` menyimpan role dan profil ke `localStorage`, lalu mengarahkan ke beranda sesuai peran.
 6. Saat aplikasi dibuka lagi, `AppProvider` memanggil `supabase.auth.getSession()` dan menyegarkan profil.
@@ -251,9 +259,9 @@ Ada dua kamus role yang perlu diselaraskan:
 - **UI / route:** `siswa`, `guru`, `wali`, `kepsek`, `tu`.
 - **Constraint database:** `super_admin`, `kepala_sekolah`, `guru`, `siswa`, `wali_kelas`.
 
-`pages/login.tsx` memetakan label lama seperti `Tata Usaha`, `Guru Mapel`, `Wali Kelas`, dan `Kepala Sekolah`. Jika nilai di database tidak cocok dengan pemetaan ini, pengguna akan jatuh ke role `siswa`.
+`pages/auth/login.tsx` memetakan label lama seperti `Tata Usaha`, `Guru Mapel`, `Wali Kelas`, dan `Kepala Sekolah`. Jika nilai di database tidak cocok dengan pemetaan ini, pengguna akan jatuh ke role `siswa`.
 
-Rekomendasi: simpan satu enum role yang baku di database dan gunakan pemetaan eksplisit di satu modul, misalnya `src/lib/roles.ts`.
+Rekomendasi: simpan satu enum role yang baku di database dan gunakan pemetaan eksplisit di `frontend/src/lib/roles.ts`.
 
 ### 6.3 Otorisasi database (RLS)
 
@@ -267,6 +275,17 @@ Migrasi mengaktifkan Row Level Security pada tabel utama. Ringkasannya:
 - `pengumuman`, `notifikasi`, `pengaturan`, `activity_log`: belum memiliki kebijakan RLS yang ketat di migrasi; perlu ditinjau.
 
 Kebijakan select publik pada data akademik longgar. Untuk produksi, sebaiknya dibatasi pada pengguna terautentikasi dan, bila perlu, pada kelas atau pengampu yang terkait.
+
+### 6.4 Operasi istimewa
+
+`backend/supabase/functions/admin-users/index.ts` memverifikasi sesi pemanggil, memeriksa role `super_admin`/`tata_usaha`/`tu`, lalu memakai service-role key di server untuk:
+
+- membuat pengguna Auth,
+- mengubah role profil,
+- mengubah status profil,
+- mereset kata sandi.
+
+Frontend hanya memanggil fungsi ini lewat `frontend/src/services/admin.ts`.
 
 ---
 
@@ -352,7 +371,7 @@ Tabel pendukung:
 - `pengaturan` — konfigurasi sistem berbentuk key/value JSONB.
 - `tahun_ajaran` — daftar tahun ajaran dan status aktif.
 - `chat_messages` — riwayat pesan chatbot.
-- `presensi_sesi` — rencana sesi presensi (tabel tersedia, adopsi di UI belum merata).
+- `presensi_sesi` — rencana sesi presensi.
 
 View database:
 
@@ -385,7 +404,7 @@ Migrasi awal membuat `projects`, `skills`, `messages`, dan `message_replies` unt
 ### 8.2 Siswa mengerjakan kuis
 
 1. Siswa membuka `/siswa/kuis/:id`.
-2. Halaman mengambil kuis dan soal dari data contoh `src/data/index.ts` (`kuisById`, `kuisSoalOf`).
+2. Halaman mengambil kuis dan soal dari data contoh `frontend/src/mocks/index.ts` (`kuisById`, `kuisSoalOf`).
 3. Jawaban disimpan sementara di `sessionStorage` selama pengerjaan.
 4. Skor dihitung di sisi klien dari kunci jawaban pada data contoh.
 5. Halaman hasil membaca kembali `sessionStorage`.
@@ -398,13 +417,14 @@ Service `submitKuis` dan tabel `hasil_kuis` sudah tersedia, tetapi alur kuis sis
 2. Komponen `Crud` generik menampilkan tabel, form, filter, impor, dan ekspor.
 3. Operasi simpan/hapus memanggil service `akademik.ts`.
 4. Statistik dashboard memakai `fetchStats` dan `fetchSiswaPerJurusan`.
+5. Operasi pengguna memanggil Edge Function `admin-users` lewat `services/admin.ts`.
 
 ### 8.4 Pengumuman dan notifikasi
 
 1. Pengumuman disimpan di tabel `pengumuman` dengan target role atau kelas.
 2. Halaman siswa, guru, dan pengumuman bersama memuat data melalui `services/pengumuman.ts`.
-3. `pages/siswa.tsx` berlangganan perubahan tabel `pengumuman` untuk memperbarui daftar secara realtime.
-4. Notifikasi di header saat ini berasal dari data contoh di `src/data/index.ts`, bukan dari tabel `notifikasi`.
+3. `pages/siswa/beranda.tsx` berlangganan perubahan tabel `pengumuman` untuk memperbarui daftar secara realtime.
+4. Notifikasi di header saat ini berasal dari data contoh di `frontend/src/mocks/index.ts`, bukan dari tabel `notifikasi`.
 
 ---
 
@@ -414,8 +434,11 @@ Service `submitKuis` dan tabel `hasil_kuis` sudah tersedia, tetapi alur kuis sis
 
 - Node.js 22
 - pnpm 10
+- Supabase CLI untuk pengelolaan database
 
-### 9.2 Perintah
+### 9.2 Perintah frontend
+
+Jalankan dari folder `frontend`:
 
 ```bash
 pnpm install
@@ -423,70 +446,55 @@ pnpm dev       # server pengembangan Vite, port default 8443
 pnpm build     # build produksi
 pnpm preview   # pratinjau hasil build
 pnpm format    # format dengan oxfmt
+pnpm exec tsc --noEmit
 ```
 
 ### 9.3 Konfigurasi Supabase
 
-Saat ini URL dan kunci Supabase ditulis langsung di `src/store/index.tsx` dan `src/pages/login.tsx`. Sebaiknya pindahkan ke environment Vite:
+Buat `frontend/.env` dari contoh:
 
 ```env
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-Lalu buat satu modul klien:
+Hanya anon key yang boleh berada di frontend. Jangan pernah menaruh service-role key di variabel `VITE_*` atau kode browser.
 
-```ts
-// src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js'
+`frontend/src/lib/supabase.ts` membuat satu klien dari variabel tersebut dan melempar error bila salah satu kosong.
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-)
-```
-
-Migrasi database dikelola lewat Supabase CLI:
+Untuk memperbarui tipe database dari project remote:
 
 ```bash
-supabase link --project-ref <project-ref>
-supabase db push
+supabase --workdir backend gen types typescript --linked > frontend/src/types/database.types.ts
 ```
+
+Migrasi database dikelola lewat Supabase CLI. Lihat `backend/README.md` untuk perintah `link`, `db push`, dan deploy Edge Function.
 
 ---
 
 ## 10. Peringatan Keamanan
 
-> **Kritis:** `src/pages/login.tsx` memuat **service role key** Supabase di kode frontend. Kunci ini melewati seluruh RLS dan setara akses penuh ke database. Siapa pun yang membuka aplikasi dapat mengambil kunci tersebut.
-
-Tindakan yang harus segera dilakukan:
-
-1. Rotasi service role key di dashboard Supabase.
-2. Hapus kunci dari riwayat Git dan dari bundel frontend.
-3. Ganti alur login menjadi `supabase.auth.signInWithPassword()`.
-4. Ambil role pengguna memakai sesi pengguna dan kebijakan RLS, bukan service role.
-5. Pindahkan operasi istimewa ke Supabase Edge Function atau backend tepercaya.
-
-Temuan keamanan lain:
-
-- Anon key ditulis langsung di beberapa file; ini tidak bersifat rahasia, tetapi sebaiknya tetap dikelola lewat environment.
-- Kunci jawaban kuis (`soal_kuis.kunci_jawaban`) dapat dibaca klien.
-- Beberapa kebijakan RLS membuka `select` untuk publik dan `write` untuk semua pengguna terautentikasi.
-- Validasi peran masih bergantung pada pemetaan string yang tidak konsisten antara UI dan constraint database.
-- `localStorage` menyimpan role dan profil; ini hanya cache tampilan, bukan bukti otorisasi.
-- `Chatbot.tsx` mengakses tabel `mapel` dan `kelas` yang tidak ada di migrasi; query akan gagal sampai nama tabel diselaraskan.
+- **Rotasi service-role key.** Key tersebut pernah tercatat di riwayat Git. Menghapusnya dari kode saat ini tidak membatalkan kebocorannya; rotasi di dashboard Supabase tetap wajib.
+- **Jangan menaruh service-role key di frontend.** Operasi istimewa harus lewat Edge Function `admin-users` yang menyimpan key di environment server.
+- **Anon key bukan rahasia**, tetapi tetap dikelola lewat environment agar mudah diganti.
+- **Kunci jawaban kuis dapat dibaca klien.** Penilaian resmi perlu dipindahkan ke server.
+- **Beberapa kebijakan RLS terlalu longgar.** Select publik dan write untuk semua pengguna terautentikasi perlu ditinjau.
+- **Validasi peran belum konsisten.** Nilai role UI dan constraint database harus diselaraskan.
+- **`localStorage` hanya cache tampilan.** Jangan menganggapnya sebagai bukti otorisasi.
+- **Chatbot mengakses tabel `mapel`/`kelas`** yang tidak ada di migrasi; query akan gagal sampai nama tabel diselaraskan.
 
 ---
 
 ## 11. Catatan Teknis dan Utang Teknis
 
-- **Dua sumber data.** Sebagian besar tampilan memakai data dummy; sebagian modul sudah memakai Supabase. Perlu pemetaan fitur mana yang sudah produksi.
+- **Dua sumber data.** Sebagian besar tampilan memakai data dummy; sebagian modul sudah memakai Supabase.
 - **Service belum konsisten.** Query langsung di halaman dan chatbot sebaiknya dipindah ke service.
 - **Role ganda.** Satukan nilai role database dan UI.
 - **Notifikasi masih dummy.** Tabel `notifikasi` dan service-nya sudah ada, tetapi header belum memakainya.
-- **Realtime belum terpusat.** Ada hook generik, tetapi implementasi tersebar di halaman.
+- **Realtime belum terpusat.** Ada hook generik, tetapi implementasi masih tersebar di halaman.
 - **Media library belum memakai Storage.** Komponen media memakai data contoh; integrasi Supabase Storage belum terlihat.
-- **Pengaturan Figma Make.** `vite.config.ts` memuat plugin khusus Figma Make. Build di luar lingkungan tersebut perlu memastikan plugin tidak menjadi dependensi yang tidak tersedia.
+- **Edge Function belum tentu ter-deploy.** `admin-users` harus di-deploy dengan `SUPABASE_SERVICE_ROLE_KEY` sebelum fitur pengguna TU berfungsi.
+- **Pengaturan Figma Make.** `frontend/vite.config.ts` memuat plugin khusus Figma Make dan membaca `../.figma/make/site.json`.
 - **Tidak ada test.** Belum ada unit test atau integration test di repositori.
 
 ---

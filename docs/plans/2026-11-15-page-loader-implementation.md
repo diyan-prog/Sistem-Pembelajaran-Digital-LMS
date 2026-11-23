@@ -4,7 +4,7 @@
 
 **Goal:** Add a smooth page transition loader with SMKN 2 Indramayu logo, pulse/bounce animation, and "Memuat halaman..." text, integrated with React.lazy and Suspense.
 
-**Architecture:** Create a `PageLoader` component, convert main pages in `src/App.tsx` or route configs to use `React.lazy` with `Suspense`, and handle session checks gracefully.
+**Architecture:** Create a `PageLoader` component, convert main pages in `frontend/src/App.tsx` or route configs to use `React.lazy` with `Suspense`, and handle session checks gracefully.
 
 **Tech Stack:** React 19, TypeScript, Tailwind CSS v4, Vite.
 
@@ -15,19 +15,19 @@
 
 ---
 
-### Task 1: Create `src/components/PageLoader.tsx`
+### Task 1: Create `frontend/src/components/PageLoader.tsx`
 
 **Files:**
-- Create: `src/components/PageLoader.tsx`
+- Create: `frontend/src/components/PageLoader.tsx`
 
 **Steps:**
-- [ ] **Step 1:** Write `src/components/PageLoader.tsx` with full-screen layout, centered logo, pulse/bounce animation, "Memuat halaman..." text, and accessibility attributes.
+- [ ] **Step 1:** Write `frontend/src/components/PageLoader.tsx` with full-screen layout, centered logo, pulse/bounce animation, "Memuat halaman..." text, and accessibility attributes.
 - [ ] **Step 2:** Verify build via `tsc --noEmit`.
 
-### Task 2: Implement Lazy Loading and Suspense in `src/App.tsx`
+### Task 2: Implement Lazy Loading and Suspense in `frontend/src/App.tsx`
 
 **Files:**
-- Modify: `src/App.tsx`
+- Modify: `frontend/src/App.tsx`
 
 **Steps:**
 - [ ] **Step 1:** Convert page imports to `React.lazy`.

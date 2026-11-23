@@ -11,13 +11,13 @@
 ## Tasks
 
 ### Task 1: Create RouteLoader Component
-- **Files:** Create `src/components/RouteLoader.tsx`
+- **Files:** Create `frontend/src/components/RouteLoader.tsx`
 - **Steps:**
   - Listen to `useLocation()`.
   - Trigger loading overlay on path change with a short minimum duration.
   - Render `PageLoader` when loading.
 
 ### Task 2: Integrate into App Router
-- **Files:** Modify `src/App.tsx`
+- **Files:** Modify `frontend/src/App.tsx`
 - **Steps:**
   - Place `<RouteLoader />` inside `<BrowserRouter>`.
