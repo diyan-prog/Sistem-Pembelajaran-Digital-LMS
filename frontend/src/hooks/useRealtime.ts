@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { supabase } from '@/store';
-import { RealtimePostgresPayload } from '@supabase/supabase-js';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export function useRealtime<T extends { id: any }>(
   table: string,
-  onUpdate: (payload: RealtimePostgresPayload<T>) => void,
+  onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
   filter?: string
 ) {
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useRealtime<T extends { id: any }>(
         'postgres_changes',
         { event: '*', schema: 'public', table, filter },
         (payload) => {
-          onUpdate(payload as RealtimePostgresPayload<T>);
+          onUpdate(payload as RealtimePostgresChangesPayload<T>);
         }
       )
       .subscribe();

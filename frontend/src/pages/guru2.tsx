@@ -7,7 +7,7 @@ import { Avatar, Badge, Btn, Card, CardTitle, Chips, DataTable, Dropzone, Drawer
 import { useApp } from '@/store'
 import { YtThumb } from './siswa'
 import { KATEGORI_KOMENTAR, TODAY, addDays, bankSoal, fmtBatas, fmtTgl, fmtTglPendek, guruOfferings, kelasById, kuis, kuisById, kuisSoal, mediaFiles, nilaiKelas, offeringById, offeringTitle, seedStat, studentsOf, subSiswa, subjectById, tugas, tugasById, sesiOf, type Soal, type TStatus } from '@/data'
-import { fetchPengampu, getGuruOfferings, fromPengampuToOffering, type Pengampu } from '@/services/akademik'
+import { fetchPengampu, fromPengampuToOffering, type Pengampu } from '@/services/akademik'
 import { fetchTugas, fetchKuis, type Tugas, type Kuis } from '@/services/materi'
 import { fetchPresensi, createPresensi } from '@/services/presensi'
 import { useGuruData } from '@/hooks/useGuruData'

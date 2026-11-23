@@ -367,7 +367,7 @@ export const fetchSiswaPerJurusan = async () => {
     const { data: siswas } = await supabase.from('siswa_kelas').select('id_kelas, kelas:classes(jurusan_id)');
     return (jurusans || []).map(j => ({
       n: j.kode,
-      v: (siswas || []).filter((s: any) => s.kelas?.jurusan_id === j.id).length
+      v: (siswas || []).filter((s: any) => s.kelas?.jurusan_id === (j as { id?: string }).id).length
     }));
   }
   return data;
