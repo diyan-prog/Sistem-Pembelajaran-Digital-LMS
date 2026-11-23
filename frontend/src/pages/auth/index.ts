@@ -1,0 +1,7 @@
+export { Login } from './login'
+export { Login as LoginDemo } from './legacy-login'
+export { SchoolIllustration } from './school-illustration'
+export { LupaSandi } from './lupa-sandi'
+export { PasswordForm, strength } from './password-form'
+export { GantiSandi } from './ganti-sandi'
+export { NotFound } from './not-found'

@@ -1,0 +1,19 @@
+import { useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Card, CardTitle, DataTable, Drawer, PageHeader, Progress, Tabs, useTab } from '@/components/ui'
+import { kelas, kelasStat, siswaOfferings, subjectById, subjects, teacherById } from '@/data'
+
+export function KepsekStatistik() {
+  const [tab, setTab] = useTab('kelas'); const [dr, setDr] = useState<string | null>(null)
+  const perMapel = subjects.map((s, i) => ({ id: s.id, nama: s.nama, nilai: 70 + ((i * 7) % 20), hadir: 82 + ((i * 5) % 14), guru: teacherById(s.guru).sapaan, kelasN: kelas.length, tuntas: 60 + ((i * 9) % 35) }))
+  const rows = tab === 'kelas' ? kelasStat.map((k) => ({ id: k.id, nama: k.nama, nilai: k.nilai, hadir: k.hadir, ext: `${k.berisiko} berisiko`, tuntas: Math.min(98, k.nilai + 4) })) : perMapel.map((m) => ({ id: m.id, nama: m.nama, nilai: m.nilai, hadir: m.hadir, ext: m.guru, tuntas: m.tuntas }))
+  const det = rows.find((r) => r.id === dr)
+  return (
+    <div><PageHeader crumbs={[{ l: 'Beranda', to: '/kepsek/beranda' }, { l: 'Statistik' }]} title="Statistik Detail" subtitle="Bandingkan capaian per kelas dan per mata pelajaran" />
+      <Tabs className="mb-6" tabs={[{ v: 'kelas', l: 'Per Kelas' }, { v: 'mapel', l: 'Per Mapel' }]} value={tab} onChange={setTab} />
+      <Card className="mb-6"><CardTitle>Perbandingan Nilai dan Kehadiran</CardTitle><div style={{ height: 320 }}><ResponsiveContainer><BarChart data={rows} barGap={6}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="nama" tickLine={false} axisLine={false} fontSize={12} interval={0} angle={tab === 'mapel' ? -15 : 0} height={tab === 'mapel' ? 60 : 30} /><YAxis domain={[50, 100]} tickLine={false} axisLine={false} /><Tooltip /><Legend /><Bar dataKey="nilai" name="Rata-rata Nilai" fill="#0B3D5F" radius={[8, 8, 0, 0]} /><Bar dataKey="hadir" name="Kehadiran (%)" fill="#2563EB" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div></Card>
+      <DataTable rows={rows} onRow={(r) => setDr(r.id)} cols={[{ key: 'nama', header: tab === 'kelas' ? 'Kelas' : 'Mata Pelajaran', sort: (r) => r.nama, render: (r) => <b>{r.nama}</b> }, { key: 'nilai', header: 'Rata-rata Nilai', sort: (r) => r.nilai }, { key: 'hadir', header: 'Kehadiran', sort: (r) => r.hadir, render: (r) => `${r.hadir}%` }, { key: 'tuntas', header: 'Ketuntasan', sort: (r) => r.tuntas, render: (r) => <div className="flex gap-2 items-center w-32"><Progress value={r.tuntas} tone="green" className="flex-1" />{r.tuntas}%</div> }, { key: 'ext', header: tab === 'kelas' ? 'Catatan' : 'Guru Pengampu' }]} actions={(r) => [{ l: 'Lihat Rincian', onClick: () => setDr(r.id) }]} />
+      <Drawer open={!!det} onClose={() => setDr(null)} title={`Rincian ${det?.nama ?? ''}`}>{det && <><div className="grid grid-cols-3 gap-3 text-center">{[['Nilai', det.nilai], ['Kehadiran', det.hadir + '%'], ['Ketuntasan', det.tuntas + '%']].map(([a, b]) => <div key={a as string} className="bg-gray-50 rounded-2xl py-4"><div className="text-2xl font-extrabold">{b}</div><div className="text-xs text-muted">{a}</div></div>)}</div>
+        <Card pad={false} className="!border-0 !shadow-none"><h4 className="font-bold mb-2">{tab === 'kelas' ? 'Nilai per Mata Pelajaran' : 'Nilai per Kelas'}</h4><div style={{ height: 240 }}><ResponsiveContainer><BarChart data={(tab === 'kelas' ? siswaOfferings(det.id === 'k2' ? 'k2' : det.id) : kelas).map((x, i) => ({ n: 'subjectId' in x ? subjectById(x.subjectId).nama.split(' ')[0] : (x as { nama: string }).nama, v: Math.min(98, det.nilai + ((i * 5) % 11) - 4) }))}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="n" tickLine={false} axisLine={false} fontSize={11} interval={0} /><YAxis domain={[50, 100]} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="v" name="Nilai" fill="#0B3D5F" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div></Card></>}</Drawer></div>
+  )
+}

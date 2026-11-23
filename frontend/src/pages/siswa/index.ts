@@ -1,0 +1,7 @@
+export { PerluDikerjakan, SiswaBeranda } from './beranda'
+export { MateriList, MateriPreview } from './materi'
+export { SiswaKelasSaya, KelasDetailSiswa } from './kelas'
+export { TugasKuisPage } from './tugas-kuis'
+export { TugasDetail } from './tugas-detail'
+export { KuisInstruksi, KuisKerjakan, KuisHasil } from './kuis'
+export { NilaiKehadiran } from './nilai'

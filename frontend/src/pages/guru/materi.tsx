@@ -1,0 +1,47 @@
+import { useRef, useState } from 'react'
+import { ArrowLeft, Check, Eye, EyeOff, FilePlus, FolderPlus, GripVertical, Pencil, Save, Trash2 } from 'lucide-react'
+import { Badge, Btn, Dropzone, Field, FileIcon, Input, Modal, PageHeader, Select, Textarea, Toggle, cn, fileTone, useCrumbs } from '@/components/ui'
+import { useApp } from '@/context'
+import { YtThumb } from '@/pages/shared'
+import { materiOf, offeringById, offeringTitle, subjectById, type Pertemuan } from '@/data'
+
+const ytId = (u: string) => u.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1]
+export function KelolaMateri({ offId, embedded }: { offId: string; embedded?: boolean }) {
+  const { toast, confirm } = useApp(); const o = offeringById(offId)
+  const [ps, setPs] = useState<Pertemuan[]>(() => materiOf(offId)); const [modal, setModal] = useState<null | { edit?: string }>(null); const [prev, setPrev] = useState<string | null>(null)
+  const dragP = useRef<number | null>(null); const dragM = useRef<{ p: number; m: number } | null>(null)
+  const blank = { judul: '', desk: '', yt: '', p: ps[ps.length - 1]?.id ?? '', tampil: true, files: 0 }; const [f, setF] = useState(blank); const [e, setE] = useState<Record<string, string>>({})
+  const open = (edit?: string) => { if (edit) { const m = ps.flatMap((p) => p.items.map((i) => ({ i, p }))).find((x) => x.i.id === edit)!; setF({ judul: m.i.judul, desk: '', yt: m.i.yt ? `https://youtu.be/${m.i.yt}` : '', p: m.p.id, tampil: m.i.tampil, files: m.i.tipe === 'youtube' ? 0 : 1 }) } else setF(blank); setE({}); setModal({ edit }) }
+  const save = () => {
+    const x: Record<string, string> = {}; if (!f.judul.trim()) x.judul = 'Judul materi wajib diisi'; if (f.yt && !ytId(f.yt)) x.yt = 'Tautan YouTube tidak valid'; if (!f.yt && !f.files && !modal?.edit) x.file = 'Unggah berkas atau isi tautan YouTube'; setE(x); if (Object.keys(x).length) return
+    const id = ytId(f.yt)
+    if (modal?.edit) setPs(ps.map((p) => ({ ...p, items: p.items.map((i) => (i.id === modal.edit ? { ...i, judul: f.judul, tampil: f.tampil, yt: id ?? i.yt } : i)) })))
+    else setPs(ps.map((p) => (p.id === f.p ? { ...p, items: [...p.items, { id: 'm' + Date.now(), judul: f.judul, tipe: id ? 'youtube' : 'dokumen', yt: id, ukuran: '1,2 MB', ext: 'PDF', tanggal: '29 Okt 2026', tampil: f.tampil }] } : p)))
+    setModal(null); toast(modal?.edit ? 'Materi berhasil diperbarui' : 'Materi berhasil ditambahkan')
+  }
+  const addP = () => { setPs([...ps, { id: 'p' + Date.now(), no: ps.length + 1, judul: `Pertemuan Baru ${ps.length + 1}`, tanggal: '29 Okt 2026', items: [] }]); toast('Pertemuan baru ditambahkan') }
+  const renum = (l: Pertemuan[]) => l.map((p, i) => ({ ...p, no: i + 1 }))
+  const flat = ps.flatMap((p) => p.items); const pv = flat.find((i) => i.id === prev)
+  return (
+    <div>
+      {!embedded && <PageHeader crumbs={useCrumbs({ l: 'Kelas Saya', to: '/guru/kelas' }, { l: subjectById(o.subjectId).nama, to: `/guru/kelas/${offId}` }, { l: 'Kelola Materi' })} title="Kelola Materi" subtitle={offeringTitle(o)} actions={<Btn variant="outline" to={`/guru/kelas/${offId}`} icon={<ArrowLeft size={18} />}>Kembali ke Kelas</Btn>} />}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4"><p className="text-sm text-muted flex items-center gap-2"><GripVertical size={16} />Seret pertemuan atau materi untuk mengatur ulang urutan.</p><div className="flex gap-3"><Btn variant="outline" icon={<FolderPlus size={18} />} onClick={addP}>Tambah Pertemuan</Btn><Btn icon={<FilePlus size={18} />} onClick={() => open()}>Tambah Materi</Btn></div></div>
+      <div className="space-y-4">{ps.map((p, pi) => (
+        <div key={p.id} draggable onDragStart={() => (dragP.current = pi)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragP.current !== null && !dragM.current) { const l = [...ps]; const [m] = l.splice(dragP.current, 1); l.splice(pi, 0, m); setPs(renum(l)); toast('Urutan pertemuan diperbarui', 'info') } dragP.current = null }} className="bg-white border border-line rounded-[20px] shadow-soft">
+          <div className="flex items-center gap-3 p-4 border-b border-line"><GripVertical className="text-muted cursor-grab" /><span className="w-9 h-9 rounded-xl bg-primary-light text-primary-dark font-extrabold flex items-center justify-center">{p.no}</span><div className="flex-1"><div className="font-bold">Pertemuan {p.no}: {p.judul}</div><div className="text-xs text-muted">{p.tanggal} â€¢ {p.items.length} materi</div></div>
+            <Btn variant="ghost" className="!h-9 !px-2" aria-label="Hapus pertemuan" onClick={() => confirm({ title: 'Hapus Pertemuan?', message: `Pertemuan ${p.no} beserta ${p.items.length} materinya akan dihapus permanen.`, danger: true, onOk: () => { setPs(renum(ps.filter((x) => x.id !== p.id))); toast('Pertemuan dihapus') } })}><Trash2 size={18} className="text-danger" /></Btn></div>
+          <ul className="p-3 space-y-2">{p.items.length === 0 && <li className="text-sm text-muted p-3">Belum ada materi pada pertemuan ini.</li>}{p.items.map((m, mi) => (
+            <li key={m.id} draggable onDragStart={(e) => { e.stopPropagation(); dragM.current = { p: pi, m: mi } }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.stopPropagation(); const d = dragM.current; if (d && d.p === pi) { const l = ps.map((x) => ({ ...x, items: [...x.items] })); const [it] = l[pi].items.splice(d.m, 1); l[pi].items.splice(mi, 0, it); setPs(l); toast('Urutan materi diperbarui', 'info') } dragM.current = null }}
+              className={cn('flex flex-wrap items-center gap-3 border border-line rounded-2xl p-3 bg-white', !m.tampil && 'opacity-60')}><GripVertical size={16} className="text-muted cursor-grab" /><span className={cn('w-10 h-10 rounded-xl flex items-center justify-center', fileTone(m.tipe))}><FileIcon t={m.tipe} /></span><div className="flex-1 min-w-[180px]"><div className="font-bold text-sm">{m.judul}</div><div className="text-xs text-muted">{m.tipe === 'youtube' ? 'Tautan YouTube' : `${m.ext} â€¢ ${m.ukuran}`} â€¢ {m.tanggal}</div></div>
+              {!m.tampil && <Badge tone="gray">Disembunyikan</Badge>}<Btn variant="ghost" className="!px-2 !h-9" aria-label="Pratinjau" onClick={() => setPrev(m.id)}><Eye size={18} /></Btn><Btn variant="ghost" className="!px-2 !h-9" aria-label={m.tampil ? 'Sembunyikan' : 'Tampilkan'} onClick={() => { setPs(ps.map((x) => ({ ...x, items: x.items.map((i) => (i.id === m.id ? { ...i, tampil: !i.tampil } : i)) }))); toast(m.tampil ? 'Materi disembunyikan dari siswa' : 'Materi ditampilkan ke siswa', 'info') }}>{m.tampil ? <EyeOff size={18} /> : <Check size={18} />}</Btn><Btn variant="ghost" className="!px-2 !h-9" aria-label="Edit" onClick={() => open(m.id)}><Pencil size={18} /></Btn>
+              <Btn variant="ghost" className="!px-2 !h-9" aria-label="Hapus" onClick={() => confirm({ title: 'Hapus Materi?', message: `"${m.judul}" akan dihapus dari pertemuan ini.`, danger: true, onOk: () => { setPs(ps.map((x) => ({ ...x, items: x.items.filter((i) => i.id !== m.id) }))); toast('Materi berhasil dihapus') } })}><Trash2 size={18} className="text-danger" /></Btn></li>))}</ul></div>))}</div>
+      <Modal open={!!modal} onClose={() => setModal(null)} wide title={modal?.edit ? 'Edit Materi' : 'Tambah Materi'} footer={<><Btn variant="outline" onClick={() => setModal(null)}>Batal</Btn><Btn icon={<Save size={16} />} onClick={save}>Simpan</Btn></>}>
+        <Input label="Judul Materi" value={f.judul} onChange={(x) => setF({ ...f, judul: x.target.value })} error={e.judul} /><Textarea label="Deskripsi" value={f.desk} onChange={(x) => setF({ ...f, desk: x.target.value })} placeholder="Ringkasan singkat materi" />
+        <Select label="Pilih Pertemuan" value={f.p} onChange={(x) => setF({ ...f, p: x.target.value })} options={ps.map((p) => ({ v: p.id, l: `Pertemuan ${p.no}: ${p.judul}` }))} />
+        <Field label="Berkas (dokumen atau gambar)" error={e.file}><Dropzone multiple onDone={(n) => setF((s) => ({ ...s, files: n }))} accept="PDF, DOCX, PPTX, PNG, JPG (maks. 20 MB)" /></Field>
+        <div><Input label="Tautan YouTube" placeholder="https://www.youtube.com/watch?v=..." value={f.yt} onChange={(x) => setF({ ...f, yt: x.target.value })} error={e.yt} />{ytId(f.yt) && <div className="mt-3 flex gap-3 items-center border border-line rounded-2xl p-2 fade"><YtThumb id={ytId(f.yt)!} className="w-36 h-20 rounded-xl" /><div className="text-sm"><b>Pratinjau tautan</b><div className="text-xs text-muted">ID video: {ytId(f.yt)}</div></div></div>}</div>
+        <div className="flex items-center justify-between border border-line rounded-xl p-3"><div><b className="text-sm">Tampilkan ke siswa</b><div className="text-xs text-muted">Materi tersembunyi tidak terlihat oleh siswa</div></div><Toggle on={f.tampil} onChange={(v) => setF({ ...f, tampil: v })} label="Tampilkan ke siswa" /></div></Modal>
+      <Modal open={!!pv} onClose={() => setPrev(null)} title={pv?.judul ?? ''} wide>{pv && (pv.tipe === 'youtube' ? <div className="aspect-video rounded-2xl overflow-hidden bg-black"><iframe className="w-full h-full" src={`https://www.youtube-nocookie.com/embed/${pv.yt}`} title={pv.judul} allowFullScreen /></div> : <div className="bg-gray-100 rounded-2xl p-6 text-center"><span className={cn('w-16 h-16 rounded-2xl mx-auto flex items-center justify-center', fileTone(pv.tipe))}><FileIcon t={pv.tipe} size={30} /></span><p className="font-bold mt-3">{pv.judul}</p><p className="text-sm text-muted">{pv.ext} â€¢ {pv.ukuran}</p></div>)}</Modal>
+    </div>
+  )
+}
