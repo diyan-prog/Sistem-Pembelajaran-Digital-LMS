@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SEMESTER } from '@/data'
+import { SEMESTER } from '@/mocks'
 
 export const SEM = SEMESTER
 const BOOT = Date.now()

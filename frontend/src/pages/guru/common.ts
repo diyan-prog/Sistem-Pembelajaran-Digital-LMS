@@ -1,4 +1,4 @@
-import { guruOfferings, subSiswa, tugas } from '@/data'
+import { guruOfferings, subSiswa, tugas } from '@/mocks'
 
 export const mine = () => guruOfferings('t1')
 export const waiting = (tid: string) => subSiswa(tid).filter((s) => s.status === 'Dikumpulkan' || s.status === 'Terlambat').length

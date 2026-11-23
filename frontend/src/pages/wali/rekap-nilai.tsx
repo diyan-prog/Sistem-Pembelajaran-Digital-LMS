@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { Avatar, Btn, Card, PageHeader, Select, cn, download } from '@/components/ui'
 import { useApp } from '@/context'
-import { nilaiSiswa, siswaOfferings, studentsOf, subjectById } from '@/data'
+import { nilaiSiswa, siswaOfferings, studentsOf, subjectById } from '@/mocks'
 import { KID } from './common'
 
 export function WaliRekapNilai() {

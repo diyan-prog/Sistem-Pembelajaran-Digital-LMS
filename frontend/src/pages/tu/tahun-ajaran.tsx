@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { Badge, Btn, Card, DataTable, Input, Modal, PageHeader, Select, StatusBadge, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { kalender, tahunAjaran } from '@/data'
+import { kalender, tahunAjaran } from '@/mocks'
 
 export function TahunAjaran() {
   const { toast, confirm } = useApp(); const [rows, setRows] = useState(tahunAjaran); const [ev, setEv] = useState(kalender); const [modal, setModal] = useState<'ta' | 'ev' | null>(null); const [f, setF] = useState({ nama: '', semester: 'Ganjil', mulai: '', selesai: '' }); const [e, setE] = useState<Record<string, string>>({}); const [fe, setFe] = useState({ judul: '', tgl: '', jenis: 'Kegiatan' })

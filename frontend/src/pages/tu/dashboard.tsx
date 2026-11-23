@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, BookOpen, CalendarDays, ClipboardCheck, GraduationCap, Users, School } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Card, CardTitle, PageHeader, Stat } from '@/components/ui'
-import { logs } from '@/data'
+import { logs } from '@/mocks'
 import { fetchSiswaPerJurusan, fetchStats } from '@/services/akademik'
 
 export function TUDashboard() {

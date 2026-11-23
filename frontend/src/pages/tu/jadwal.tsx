@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { AlertTriangle, GripVertical, Save } from 'lucide-react'
 import { Btn, Card, PageHeader, Select, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { HARI, kelas, offerings, subjectById, teacherById } from '@/data'
+import { HARI, kelas, offerings, subjectById, teacherById } from '@/mocks'
 
 const tm = (t: string) => { const [h, m] = t.split('.').map(Number); return h * 60 + m }
 

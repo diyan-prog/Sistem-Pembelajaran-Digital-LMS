@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Award, CalendarCheck, GraduationCap, Medal, Trophy, Users } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardTitle, PageHeader, Select, Stat } from '@/components/ui'
-import { kelas, kelasStat, subjects } from '@/data'
+import { kelas, kelasStat, subjects } from '@/mocks'
 
 const PERIODE: Record<string, number> = { 'Bulan Ini': 0.97, 'Semester Ini': 1, 'Tahun Ajaran': 1.02 }
 export function KepsekBeranda() {

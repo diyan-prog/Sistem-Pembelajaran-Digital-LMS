@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Check, FileText, Pencil } from 'lucide-react'
 import { Btn, Card, Chips, DataTable, Drawer, Empty, Input, NameCell, PageHeader, Select, StatusBadge, Textarea, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { KATEGORI_KOMENTAR, guruOfferings, kelasById, offeringById, subSiswa, tugas, tugasById, type TStatus } from '@/data'
+import { KATEGORI_KOMENTAR, guruOfferings, kelasById, offeringById, subSiswa, tugas, tugasById, type TStatus } from '@/mocks'
 import { fromPengampuToOffering } from '@/services/akademik'
 import { useGuruData } from '@/hooks/useGuruData'
 

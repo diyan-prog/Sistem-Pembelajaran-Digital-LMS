@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Check, FileSpreadsheet, X } from 'lucide-react'
 import { Badge, Btn, Card, DataTable, NameCell, PageHeader, Stat, cn, download, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { guruOfferings, nilaiKelas, offeringById, offeringTitle, subjectById } from '@/data'
+import { guruOfferings, nilaiKelas, offeringById, offeringTitle, subjectById } from '@/mocks'
 import { fromPengampuToOffering } from '@/services/akademik'
 import { useGuruData } from '@/hooks/useGuruData'
 

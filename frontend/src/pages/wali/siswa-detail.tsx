@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft, Award, CalendarCheck, FileText, Mail, MapPin, Phone, StickyNote, User as UserIcon } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Badge, Btn, Card, CardTitle, DataTable, PageHeader, Stat, StatusBadge } from '@/components/ui'
-import { absensiSiswa, fmtBatas, kelasById, nilaiSiswa, offeringById, offeringTitle, sesiOf, siswaOfferings, studentById, subjectById, tugas } from '@/data'
+import { absensiSiswa, fmtBatas, kelasById, nilaiSiswa, offeringById, offeringTitle, sesiOf, siswaOfferings, studentById, subjectById, tugas } from '@/mocks'
 import { statusOf } from './common'
 
 export function WaliSiswaDetail() {

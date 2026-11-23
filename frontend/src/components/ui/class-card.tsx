@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Info, User } from 'lucide-react'
-import { fmtSlot, offeringTitle, pct, subjectById, jurusanNama, kelasById, teacherById, type Offering } from '@/data'
+import { fmtSlot, offeringTitle, pct, subjectById, jurusanNama, kelasById, teacherById, type Offering } from '@/mocks'
 import { Card } from './card'
 import { Progress } from './progress'
 

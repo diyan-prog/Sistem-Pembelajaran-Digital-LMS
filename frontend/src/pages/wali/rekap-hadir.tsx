@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { Badge, Btn, Card, DataTable, NameCell, PageHeader, Progress, Select, cn, download } from '@/components/ui'
 import { useApp } from '@/context'
-import { studentsOf } from '@/data'
+import { studentsOf } from '@/mocks'
 import { KID } from './common'
 
 export function WaliRekapHadir() {

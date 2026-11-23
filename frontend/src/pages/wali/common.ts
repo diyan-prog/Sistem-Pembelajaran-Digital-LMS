@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '@/context'
 import { fetchKelas, fetchSiswaKelas } from '@/services/akademik'
-import type { Siswa } from '@/data'
+import type { Siswa } from '@/mocks'
 
 export const KID = 'k2'
 export const statusOf = (s: Siswa) => (s.risiko ? 'Berisiko' : s.hadir < 80 || s.rata < 75 ? 'Waspada' : 'Aman')

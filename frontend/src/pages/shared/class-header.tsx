@@ -1,6 +1,6 @@
 import { Calendar, MapPin, User } from 'lucide-react'
 import { Card, Progress } from '@/components/ui'
-import { fmtSlot, jurusanNama, kelasById, offeringTitle, pct, subjectById, teacherById, type Offering } from '@/data'
+import { fmtSlot, jurusanNama, kelasById, offeringTitle, pct, subjectById, teacherById, type Offering } from '@/mocks'
 
 export function ClassHeader({ o, mode }: { o: Offering; mode: 'siswa' | 'guru' }) {
   const p = pct(o); const k = kelasById(o.kelasId); const g = teacherById(o.guru)

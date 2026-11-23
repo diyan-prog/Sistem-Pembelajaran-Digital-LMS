@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Card, Chips, Empty, PageHeader, SearchBar, Select, Tabs, useCrumbs, useTab } from '@/components/ui'
-import { kuis, offeringById, subjectById, tugas } from '@/data'
+import { kuis, offeringById, subjectById, tugas } from '@/mocks'
 import { KuisCard } from '@/pages/shared'
 import { TugasRow } from './tugas-row'
 

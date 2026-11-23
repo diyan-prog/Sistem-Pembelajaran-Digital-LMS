@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Award, Building2, CalendarDays, ClipboardCheck, Save } from 'lucide-react'
 import { Btn, Card, CardTitle, Dropzone, Field, Input, PageHeader, Progress, Select, Textarea, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { jamPelajaran } from '@/data'
+import { jamPelajaran } from '@/mocks'
 
 export function PengaturanSistem() {
   const { toast } = useApp(); const [f, setF] = useState({ ta: '2026/2027 - Ganjil', nama: 'SMK Negeri 2 Indramayu', npsn: '20213456', alamat: 'Jl. Raya Lohbener, Indramayu, Jawa Barat', telp: '(0234) 272 123', min: 75 }); const [b, setB] = useState({ tugas: 30, kuis: 20, uts: 30, uas: 20 }); const [jam, setJam] = useState(jamPelajaran.map((j) => [...j])); const [e, setE] = useState<Record<string, string>>({})

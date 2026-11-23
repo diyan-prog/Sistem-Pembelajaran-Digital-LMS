@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { KeyRound, Save, UserPlus } from 'lucide-react'
 import { Btn, Card, DataTable, Input, Modal, NameCell, PageHeader, Select, Tabs, Toggle, useCrumbs, useTab } from '@/components/ui'
 import { useApp } from '@/context'
-import { ROLE_ORDER, permissions } from '@/data'
+import { ROLE_ORDER, permissions } from '@/mocks'
 import { fetchUsers, updateUserRole } from '@/services/akademik'
 import { adminUsers } from '@/services/admin'
 

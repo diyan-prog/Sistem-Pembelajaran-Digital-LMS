@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, CheckCircle2, Download, FileText, Paperclip, Send, Undo2 } from 'lucide-react'
 import { Btn, Card, Dropzone, PageHeader, Ring, StatusBadge, Textarea, download, useCountdown, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { fmtBatas, offeringById, offeringTitle, subjectById, teacherById, tugasById } from '@/data'
+import { fmtBatas, offeringById, offeringTitle, subjectById, teacherById, tugasById } from '@/mocks'
 
 export function TugasDetail() {
   const { id } = useParams(); const t0 = tugasById(id!); const { toast, confirm } = useApp(); const o = offeringById(t0.off)

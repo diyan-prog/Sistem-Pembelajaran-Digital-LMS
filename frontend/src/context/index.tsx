@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
-import { notifGuru, notifUmum, notifikasi } from '@/data'
+import { notifGuru, notifUmum, notifikasi } from '@/mocks'
 import { ROLES, type Role } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
 

@@ -3,7 +3,7 @@ import { ClipboardCheck } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Badge, Card, CardTitle } from '@/components/ui'
 import { ClassBrowser, ScheduleCard } from '@/pages/shared'
-import { guruOfferings, kelasById, offeringById, offeringTitle, scheduleOf, studentsOf, subSiswa, tugas } from '@/data'
+import { guruOfferings, kelasById, offeringById, offeringTitle, scheduleOf, studentsOf, subSiswa, tugas } from '@/mocks'
 import { mine, myTugas, waiting } from './common'
 
 export function GuruBeranda() {

@@ -1,6 +1,6 @@
 import { Clock, HelpCircle, Play, Repeat, Timer, Trophy } from 'lucide-react'
 import { Btn, Card, StatusBadge } from '@/components/ui'
-import { fmtBatas, fmtTglPendek, offeringById, offeringTitle, type Kuis } from '@/data'
+import { fmtBatas, fmtTglPendek, offeringById, offeringTitle, type Kuis } from '@/mocks'
 
 export function KuisCard({ k, base = '/siswa' }: { k: Kuis; base?: string }) {
   const o = offeringById(k.off); const can = k.status === 'Tersedia'

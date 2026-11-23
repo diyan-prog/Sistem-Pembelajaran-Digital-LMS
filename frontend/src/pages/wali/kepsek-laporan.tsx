@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FileSpreadsheet, FileText } from 'lucide-react'
 import { Badge, Btn, Card, CardTitle, PageHeader, Select, StatusBadge, download } from '@/components/ui'
 import { useApp } from '@/context'
-import { kelas, kelasStat } from '@/data'
+import { kelas, kelasStat } from '@/mocks'
 
 export function KepsekLaporan() {
   const { toast } = useApp(); const [j, setJ] = useState('Rekap Kehadiran'); const [p, setP] = useState('Oktober 2026'); const [k, setK] = useState('Semua')

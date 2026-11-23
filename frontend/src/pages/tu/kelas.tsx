@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, School, UserPlus, Users } from 'lucide-react'
 import { Btn, DataTable, NameCell, PageHeader, Stat, StatusBadge, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { kelasById, jurusanNama, offerings, studentsOf, teacherById } from '@/data'
+import { kelasById, jurusanNama, offerings, studentsOf, teacherById } from '@/mocks'
 import { createKelas, deleteKelas, fetchJurusan, fetchKelas, fetchUsers, updateKelas } from '@/services/akademik'
 import { Crud } from './components'
 

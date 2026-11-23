@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { LayoutGrid, List } from 'lucide-react'
 import { Badge, Card, CardTitle, PageHeader, Segmented, Tabs, useCrumbs, useTab } from '@/components/ui'
 import { useRole } from '@/context'
-import { HARI, TODAY, guruOfferings, kalender, offeringTitle, scheduleOf, siswaOfferings, subjectById } from '@/data'
+import { HARI, TODAY, guruOfferings, kalender, offeringTitle, scheduleOf, siswaOfferings, subjectById } from '@/mocks'
 import { WeeklyGrid } from './weekly-grid'
 
 export function JadwalPage() {

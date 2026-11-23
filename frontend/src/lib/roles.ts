@@ -1,5 +1,5 @@
 import { BarChart3, BookOpen, CalendarDays, ClipboardCheck, ClipboardList, FileBarChart, Home, Library, LayoutDashboard, Megaphone, School, Users, GraduationCap, Award, Activity, Table2, Database, type LucideIcon } from 'lucide-react'
-import { ME_SISWA } from '@/data'
+import { ME_SISWA } from '@/mocks'
 
 export type Role = 'siswa' | 'guru' | 'wali' | 'kepsek' | 'tu'
 export type Menu = { label: string; icon: LucideIcon; to: string }

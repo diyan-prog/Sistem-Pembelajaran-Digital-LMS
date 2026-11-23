@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Bold, Eye, Italic, List as ListIcon, ListOrdered, Pencil, Plus, Save, Send, Trash2 } from 'lucide-react'
 import { Btn, Card, Chips, DataTable, Dropzone, Field, Input, PageHeader, Progress, StatusBadge, Toggle, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { fmtBatas, offeringById, offeringTitle, tugas, tugasById } from '@/data'
+import { fmtBatas, offeringById, offeringTitle, tugas, tugasById } from '@/mocks'
 import { mine } from './common'
 
 export function TugasListGuru({ offId }: { offId?: string }) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Btn, Card, ClassCard, Empty, SearchBar, Select, Tabs, useTab } from '@/components/ui'
-import { archived, guruOfferings, kelasById, siswaOfferings, subjectById, teacherById } from '@/data'
+import { archived, guruOfferings, kelasById, siswaOfferings, subjectById, teacherById } from '@/mocks'
 
 export function ClassBrowser({ mode, withFilter, to }: { mode: 'siswa' | 'guru'; withFilter?: boolean; to: string }) {
   const [tab, setTab] = useTab('aktif', 'kelas'); const [q, setQ] = useState(''); const [sem, setSem] = useState('Semua'); const [kl, setKl] = useState('Semua')

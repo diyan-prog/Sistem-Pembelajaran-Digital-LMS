@@ -4,7 +4,7 @@ import { Award, ClipboardCheck, Megaphone, Pencil, Send, Trash2 } from 'lucide-r
 import { Avatar, Btn, Card, CardTitle, DataTable, Input, Modal, NameCell, PageHeader, StatusBadge, Tabs, Textarea, cn, useCrumbs, useTab } from '@/components/ui'
 import { useApp } from '@/context'
 import { ClassBrowser, ClassHeader, KuisCard, classAnn } from '@/pages/shared'
-import { kelasById, offeringById, offeringTitle, students, studentsOf, subjectById } from '@/data'
+import { kelasById, offeringById, offeringTitle, students, studentsOf, subjectById } from '@/mocks'
 import { KelolaMateri } from './materi'
 import { TugasListGuru } from './tugas'
 import { KuisListGuru } from './kuis'

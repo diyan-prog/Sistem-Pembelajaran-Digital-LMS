@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GraduationCap, LayoutGrid, List, User as UserIcon } from 'lucide-react'
 import { Card, DataTable, PageHeader, Progress, Segmented } from '@/components/ui'
-import { jurusanNama, kelasById, siswaOfferings, studentsOf, subjectById, teacherById } from '@/data'
+import { jurusanNama, kelasById, siswaOfferings, studentsOf, subjectById, teacherById } from '@/mocks'
 import { KID } from './common'
 
 export function WaliKelas() {

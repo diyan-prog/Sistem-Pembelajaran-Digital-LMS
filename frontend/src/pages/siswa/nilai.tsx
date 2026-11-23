@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Badge, Card, CardTitle, DataTable, PageHeader, Progress, StatusBadge, Tabs, useCrumbs, useTab } from '@/components/ui'
-import { ME_SISWA, absensiSiswa, nilaiSiswa, sesiOf, siswaOfferings, subjectById, trenNilaiBulan } from '@/data'
+import { ME_SISWA, absensiSiswa, nilaiSiswa, sesiOf, siswaOfferings, subjectById, trenNilaiBulan } from '@/mocks'
 
 export function NilaiKehadiran() {
   const [tab, setTab] = useTab('nilai'); const nl = nilaiSiswa(ME_SISWA.id); const ab = absensiSiswa(ME_SISWA.id)

@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Eye } from 'lucide-react'
 import { Accordion, Btn, Card, Empty, FileIcon, PageHeader, cn, download, fileTone, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { materiOf, offeringById, subjectById } from '@/data'
+import { materiOf, offeringById, subjectById } from '@/mocks'
 import { YtThumb } from '@/pages/shared'
 
 export function MateriList({ offId }: { offId: string }) {

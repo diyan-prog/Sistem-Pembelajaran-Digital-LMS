@@ -3,7 +3,7 @@
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
  */
 import { supabase } from '@/lib/supabase';
-import type { Slot } from '@/data';
+import type { Slot } from '@/mocks';
 
 // ==================== TYPES ====================
 export interface User {

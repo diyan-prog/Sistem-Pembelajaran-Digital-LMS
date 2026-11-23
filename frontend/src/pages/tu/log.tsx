@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { Badge, Btn, DataTable, NameCell, PageHeader, Select, download, useCrumbs } from '@/components/ui'
-import { logs } from '@/data'
+import { logs } from '@/mocks'
 
 export function LogAktivitas() {
   const [r, setR] = useState('Semua'); const [m, setM] = useState('Semua'); const rows = logs.filter((l) => (r === 'Semua' || l.role === r) && (m === 'Semua' || l.modul === m))

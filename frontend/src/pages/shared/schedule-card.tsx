@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { BookOpen, CheckCheck, Clock, MapPin } from 'lucide-react'
 import { Btn, Card, Empty, cn } from '@/components/ui'
 import { useRole } from '@/context'
-import { HARI_S, TODAY, fmtTgl, offeringTitle, scheduleOf, weekDays, type Offering } from '@/data'
+import { HARI_S, TODAY, fmtTgl, offeringTitle, scheduleOf, weekDays, type Offering } from '@/mocks'
 
 export function ScheduleCard({ offs, mode, loading }: { offs: Offering[]; mode: 'siswa' | 'guru'; loading?: boolean }) {
   const days = weekDays(); const [sel, setSel] = useState(new Date().getDay()); const nav = useNavigate(); const { cfg } = useRole()

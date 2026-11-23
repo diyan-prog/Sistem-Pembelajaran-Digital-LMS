@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Award, CalendarCheck, Users } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Badge, Card, CardTitle, Chips, DataTable, NameCell, PageHeader, Stat, StatusBadge, cn } from '@/components/ui'
-import { bulanHadir, distribusiNilai, studentsOf } from '@/data'
+import { bulanHadir, distribusiNilai, studentsOf } from '@/mocks'
 import { KID, statusOf, useWaliData } from './common'
 
 export function WaliBeranda() {
