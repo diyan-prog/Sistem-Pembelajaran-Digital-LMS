@@ -4,8 +4,8 @@ import { AppProvider, useApp } from '@/context'
 import { ROLES } from '@/lib/roles'
 import { RoleGate, SidebarLayout, TopNavLayout } from '@/components/layouts'
 import { PageHeader, useCrumbs } from '@/components/ui'
-import PageLoader from '@/components/PageLoader'
-import { RouteLoader } from '@/components/RouteLoader'
+import PageLoader from '@/components/loaders/PageLoader'
+import { RouteLoader } from '@/components/loaders/RouteLoader'
 
 const GantiSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.GantiSandi })))
 const LupaSandi = lazy(() => import('@/pages/auth').then(m => ({ default: m.LupaSandi })))
