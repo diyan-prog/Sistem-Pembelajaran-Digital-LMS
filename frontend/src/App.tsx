@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
-import { AppProvider, ROLES, useApp } from '@/store'
+import { AppProvider, useApp } from '@/context'
+import { ROLES } from '@/lib/roles'
 import { RoleGate, SidebarLayout, TopNavLayout } from '@/components/layouts'
 import { PageHeader, useCrumbs } from '@/components/ui'
 import PageLoader from '@/components/PageLoader'

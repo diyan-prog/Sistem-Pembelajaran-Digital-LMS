@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, X, Sparkles, RefreshCw, ChevronRight } from 'lucide-react'
-import { useApp, useRole, supabase } from '@/store'
+import { useApp, useRole } from '@/context'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/components/ui'
 
 type Message = {

@@ -3,9 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Building2, CalendarDays, Download, Eye, FileSpreadsheet, GraduationCap, KeyRound, Pencil, Plus, Save, School, Trash2, Upload, Users, BookOpen, Database, Activity, ClipboardCheck, GripVertical, ArrowLeft, Check, UserPlus, Award } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Badge, Btn, Card, CardTitle, Chips, DataTable, Drawer, Dropzone, Empty, Field, Input, Modal, NameCell, PageHeader, Segmented, Select, Stat, StatusBadge, Tabs, Textarea, Toggle, cn, useCrumbs, useTab, download, Progress, SearchBar } from '@/components/ui'
-import { useApp } from '@/store'
+import { useApp } from '@/context'
 import { HARI, jamPelajaran, jurusan, jurusanNama, kalender, kelas, kelasById, logs, offerings, offeringTitle, permissions, ROLE_ORDER, students, studentsOf, subjectById, subjects, tahunAjaran, teacherById, teachers, type Offering } from '@/data'
 import { fetchUsers, fetchKelas, fetchMapel, fetchPengampu, createKelas, updateKelas, deleteKelas, createMapel, updateMapel, deleteMapel, createPengampu, updatePengampu, deletePengampu, fetchSiswaKelas, updateUserRole, createSiswa, updateSiswa, deleteUser, createGuru, updateGuru, fetchJurusan, createJurusan, updateJurusan, deleteJurusan, fetchStats, fetchSiswaPerJurusan, updateUser } from '@/services/akademik'
+import { adminUsers } from '@/services/admin'
 
 type F = { k: string; l: string; type?: string; options?: (string | { v: string; l: string })[]; req?: boolean; validate?: (v: string, all: Record<string, string>) => string }
 type FD = { k: string; l: string; options: string[]; get: (r: any) => string }
@@ -319,23 +320,13 @@ export function ManajemenPengguna() {
     }
     setIsSubmitting(true);
     try {
-      const serviceRole = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo';
-      const res = await fetch('https://phtqlmidfaocacphblej.supabase.co/auth/v1/admin/users', {
-        method: 'POST',
-        headers: {
-          'apikey': serviceRole,
-          'Authorization': `Bearer ${serviceRole}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: newEmail,
-          password: newPassword,
-          email_confirm: true,
-          user_metadata: { nama_lengkap: newName, role: newRole }
-        })
+      await adminUsers({
+        action: 'create',
+        email: newEmail,
+        password: newPassword,
+        email_confirm: true,
+        user_metadata: { nama_lengkap: newName, role: newRole }
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Gagal membuat pengguna');
       toast('Pengguna dan peran baru berhasil ditambahkan');
       setShowAddModal(false);
       setNewEmail('');
@@ -369,43 +360,17 @@ export function ManajemenPengguna() {
       {tab === 'pengguna' ? <DataTable rows={users} pageSize={10} searchText={(u) => u.nama + u.ident} searchPlaceholder="Cari nama atau email" filters={null} cols={[{ key: 'nama', header: 'Pengguna', sort: (u: any) => u.nama, render: (u: any) => <NameCell name={u.nama} sub={u.ident} /> }, { key: 'role', header: 'Peran', render: (u: any) => <select aria-label={`Peran ${u.nama}`} value={u.role} onChange={async (e) => {
         const newRole = e.target.value;
         setUsers(users.map((x) => (x.id === u.id ? { ...x, role: newRole } : x)));
-        // Update Supabase
-        await fetch(`https://phtqlmidfaocacphblej.supabase.co/rest/v1/profiles?id=eq.${u.id}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ role: newRole })
-        });
+        // Update melalui Edge Function agar service role tidak berada di frontend
+        await adminUsers({ action: 'update-role', id: u.id, role: newRole });
         toast(`Peran ${u.nama} diubah menjadi ${newRole}`);
       }} className="h-10 rounded-xl border border-line px-3 text-sm bg-white">{['Tata Usaha', 'Guru Mapel', 'Wali Kelas', 'Kepala Sekolah', 'Siswa'].map((r) => <option key={r} value={r}>{r}</option>)}</select> }, { key: 'aktif', header: 'Status', render: (u: any) => <Toggle on={u.aktif} label={`Aktif ${u.nama}`} onChange={async (v) => {
         setUsers(users.map((x) => (x.id === u.id ? { ...x, aktif: v } : x)));
         const newStatus = v ? 'aktif' : 'nonaktif';
-        await fetch(`https://phtqlmidfaocacphblej.supabase.co/rest/v1/profiles?id=eq.${u.id}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ status: newStatus })
-        });
+        await adminUsers({ action: 'update-status', id: u.id, status: newStatus });
         toast(v ? 'Akun diaktifkan di Supabase' : 'Akun dinonaktifkan di Supabase', 'info');
       }} /> }]}
         actions={(u: any) => [{ l: 'Reset Kata Sandi', icon: <KeyRound size={16} />, onClick: () => confirm({ title: 'Reset Kata Sandi?', message: `Kata sandi ${u.nama} akan diatur ulang ke password123.`, okLabel: 'Ya, Reset', onOk: async () => {
-          await fetch(`https://phtqlmidfaocacphblej.supabase.co/auth/v1/admin/users/${u.id}`, {
-            method: 'PUT',
-            headers: {
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password: 'password123' })
-          });
+          await adminUsers({ action: 'reset-password', id: u.id, password: 'password123' });
           toast('Kata sandi berhasil direset ke password123', 'info');
         }}) }]} />
         : <Card pad={false} className="overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm min-w-[720px]"><thead className="bg-gray-50 text-xs uppercase text-muted"><tr><th className="p-4 text-left">Izin</th>{ROLE_ORDER.map((r) => <th key={r} className="text-center">{r}</th>)}</tr></thead><tbody>{perm.map((p, i) => <tr key={i} className="border-t border-line h-14 hover:bg-gray-50"><td className="p-4 font-semibold">{p[0] as string}</td>{[1, 2, 3, 4, 5].map((c) => <td key={c} className="text-center"><input type="checkbox" aria-label={`${p[0]} ${ROLE_ORDER[c - 1]}`} checked={!!p[c]} onChange={() => setPerm(perm.map((x, j) => (j === i ? x.map((v, k) => (k === c ? !v : v)) : x)))} className="w-5 h-5 accent-[#0B3D5F]" /></td>)}</tr>)}</tbody></table></div><div className="p-4 border-t border-line flex justify-end"><Btn icon={<Save size={18} />} onClick={() => toast('Hak akses berhasil disimpan')}>Simpan Hak Akses</Btn></div></Card>}</div>

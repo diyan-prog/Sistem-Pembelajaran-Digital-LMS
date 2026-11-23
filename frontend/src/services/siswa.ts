@@ -1,4 +1,4 @@
-import { supabase } from '@/store';
+import { supabase } from '@/lib/supabase';
 
 export const fetchSiswaClasses = async (siswaId: string) => {
   const { data, error } = await supabase

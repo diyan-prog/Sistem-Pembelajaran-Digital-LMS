@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { Avatar, Badge, Btn, Card, CardTitle, DataTable, Dropzone, Empty, FileIcon, Input, Modal, NameCell, PageHeader, Progress, Select, StatusBadge, Tabs, Textarea, Toggle, cn, fileTone, useCrumbs, useTab, Field, Chips, download } from '@/components/ui'
 import { ScheduleCard, ClassBrowser } from './shared'
 import { ClassHeader, classAnn, KuisCard, YtThumb } from './siswa'
-import { useApp } from '@/store'
+import { useApp } from '@/context'
 import { bankSoal, fmtBatas, guruOfferings, kelasById, kuis, materiOf, offeringById, offeringTitle, studentsOf, subjectById, subSiswa, scheduleOf, tugas, tugasById, type Pertemuan, type Soal, offerings, students, fmtTglPendek, pengumuman, kuisSoal } from '@/data'
 
 const mine = () => guruOfferings('t1')

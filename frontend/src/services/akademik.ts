@@ -2,7 +2,7 @@
  * Layanan Data Akademik
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
  */
-import { supabase } from '@/store';
+import { supabase } from '@/lib/supabase';
 import type { Slot } from '@/data';
 
 // ==================== TYPES ====================

@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieCh
 import { Accordion, Badge, Btn, Card, CardTitle, Chips, ClassCard, DataTable, Dropzone, Empty, FileIcon, Progress, PageHeader, Ring, SearchBar, Select, StatusBadge, Tabs, Textarea, cn, fileTone, useCountdown, useCrumbs, useTab, download, Modal } from '@/components/ui'
 import { Logo } from '@/components/layouts'
 import { ScheduleCard, ClassBrowser } from './shared'
-import { useApp } from '@/store'
+import { useApp } from '@/context'
 import { ME_SISWA, absensiSiswa, fmtBatas, fmtSlot, jurusanNama, kelasById, kuis, kuisById, kuisSoal, kuisSoalOf, materiOf, nilaiSiswa, offeringById, offeringTitle, pct, pengumuman, sesiOf, siswaOfferings, subjectById, teacherById, trenNilaiBulan, tugas, tugasById, fmtTglPendek, type Offering, type Tugas, type Kuis, offerings } from '@/data'
 
 const deadlineOf = (iso: string) => fmtBatas(iso).replace(/(\d{2})\.(\d{2})$/, '$1.$2')
@@ -81,7 +81,7 @@ export function MateriPreview() {
 const tugasIcon = (s: string) => s === 'Dinilai' ? 'bg-primary-light text-primary-dark' : s === 'Terlambat' ? 'bg-orange-100 text-orange-700' : s === 'Dikumpulkan' ? 'bg-blue-100 text-accent' : 'bg-gray-100 text-muted'
 import { fetchPengumuman, type Pengumuman } from '@/services/pengumuman'
 import { fetchTugas, fetchKuis } from '@/services/materi'
-import { supabase } from '@/store'
+import { supabase } from '@/lib/supabase'
 
 export function PerluDikerjakan({ limit }: { limit?: number }) {
   const { userData, toast } = useApp()

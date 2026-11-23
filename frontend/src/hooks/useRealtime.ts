@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '@/store';
+import { supabase } from '@/lib/supabase';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export function useRealtime<T extends { id: any }>(

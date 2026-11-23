@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchPengampu, type Pengampu } from '@/services/akademik';
 import { fetchTugas, fetchKuis, type Tugas, type Kuis } from '@/services/materi';
-import { useApp } from '@/store';
+import { useApp } from '@/context';
 
 export const useGuruData = () => {
   const { userData } = useApp();

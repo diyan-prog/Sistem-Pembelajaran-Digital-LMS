@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, BookMarked, CheckCircle2, Eye, EyeOff, FolderOpen, KeyRound, Lock, Mail, QrCode, ShieldCheck, User, Users, GraduationCap, School, Crown, ClipboardCheck } from 'lucide-react'
 import { Btn, Field, Input, cn } from '@/components/ui'
 import { Logo } from '@/components/layouts'
-import { ROLES, useApp, type Role } from '@/store'
+import { ROLES, type Role } from '@/lib/roles'
+import { useApp } from '@/context'
 
 export function SchoolIllustration() {
   return (

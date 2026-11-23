@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type ButtonHTMLAt
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown, Info, Loader2, MoreVertical, Search, UploadCloud, User, X, FileText, Image as ImageIcon, PlayCircle, CheckCircle2, Trash2 } from 'lucide-react'
 import { fmtSlot, offeringTitle, pct, subjectById, jurusanNama, kelasById, teacherById, SEMESTER, type Offering } from '@/data'
-import { useApp, useRole } from '@/store'
+import { useApp, useRole } from '@/context'
 
 export const cn = (...a: (string | false | null | undefined | 0)[]) => a.filter(Boolean).join(' ')
 

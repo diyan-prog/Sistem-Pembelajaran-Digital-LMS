@@ -1,4 +1,4 @@
-import { supabase } from '@/store';
+import { supabase } from '@/lib/supabase';
 
 // ==================== TYPES ====================
 export interface Presensi {

@@ -1,4 +1,4 @@
-import { supabase } from '@/store';
+import { supabase } from '@/lib/supabase';
 
 export interface Profile {
   id: string;

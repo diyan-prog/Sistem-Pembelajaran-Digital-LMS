@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/layouts';
-import { ROLES, useApp, type Role, supabase } from '@/store';
+import { ROLES, type Role } from '@/lib/roles';
+import { useApp } from '@/context';
+import { supabase } from '@/lib/supabase';
 
 export function Login() {
   const { login } = useApp();
@@ -36,30 +38,22 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      // 1. Authenticate with Supabase Auth (via REST API)
-      const res = await fetch('https://phtqlmidfaocacphblej.supabase.co/auth/v1/token?grant_type=password', {
-        method: 'POST',
-        headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjI0NTksImV4cCI6MjEwNjQzODQ1OX0.8mlV5OrWgBJUWEzejGQHnVxsZqidwPwkq-tH3w_WNtg',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: username, password: password })
+      // 1. Autentikasi dengan Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: username,
+        password,
       });
 
-      if (!res.ok) throw new Error('Username atau password salah');
-      
-      const authData = await res.json();
-      
-      // 2. Fetch role dari tabel profiles (pakai service role key agar tidak terblokir RLS)
-      const profileRes = await fetch(`https://phtqlmidfaocacphblej.supabase.co/rest/v1/profiles?id=eq.${authData.user.id}&select=role`, {
-        headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBodHFsbWlkZmFvY2FjcGhibGVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDg2MjQ1OSwiZXhwIjoyMTA2NDM4NDU5fQ.o5iFuaMdkCMK1b8a9ulmxSX8hLDMyQl5tbmcG3wTYRo'
-        }
-      });
-      
-      const profiles = await profileRes.json();
-      const dbRole = profiles[0]?.role;
+      if (authError || !authData.user) throw new Error('Username atau password salah');
+
+      // 2. Ambil role dari tabel profiles menggunakan sesi pengguna dan RLS
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
+
+      const dbRole = profile?.role;
       const r: Role =
         dbRole === 'Tata Usaha' ? 'tu' :
         dbRole === 'Guru Mapel' ? 'guru' :
