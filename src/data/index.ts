@@ -1,5 +1,5 @@
 // Data dummy terpusat — Sistem Pembelajaran Digital SMK Negeri 2 Indramayu
-export const TODAY = new Date(2026, 9, 29)
+export const TODAY = new Date()
 export const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 export const HARI_S = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 export const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']

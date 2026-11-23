@@ -68,7 +68,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
   useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [open, onClose])
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4 fade" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4 fade" onClick={onClose}>
       <div role="dialog" aria-modal aria-label={title} className={cn('pop bg-white rounded-[20px] shadow-lift w-full max-h-[90vh] flex flex-col', wide ? 'max-w-3xl' : 'max-w-lg')} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-3"><h3 className="text-xl font-bold">{title}</h3><IconBtn label="Tutup" onClick={onClose}><X size={20} /></IconBtn></div>
         <div className="px-6 py-2 overflow-y-auto space-y-4">{children}</div>
@@ -81,7 +81,7 @@ export function Drawer({ open, onClose, title, children, footer, width = 520 }: 
   useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [open, onClose])
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[90] bg-black/40 fade" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] bg-black/60 fade" onClick={onClose}>
       <aside role="dialog" aria-modal aria-label={title} className="slidein absolute right-0 top-0 h-full bg-white shadow-lift flex flex-col w-full rounded-l-[20px]" style={{ maxWidth: width }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 h-16 border-b border-line shrink-0"><h3 className="text-lg font-bold">{title}</h3><IconBtn label="Tutup" onClick={onClose}><X size={20} /></IconBtn></div>
         <div className="flex-1 overflow-y-auto p-6 space-y-5">{children}</div>

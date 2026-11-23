@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveCo
 import { Avatar, Badge, Btn, Card, CardTitle, Chips, DataTable, Drawer, Dropzone, Empty, Field, Input, Modal, NameCell, PageHeader, Segmented, Select, Stat, StatusBadge, Tabs, Textarea, Toggle, cn, useCrumbs, useTab, download, Progress, SearchBar } from '@/components/ui'
 import { useApp } from '@/store'
 import { HARI, jamPelajaran, jurusan, jurusanNama, kalender, kelas, kelasById, logs, offerings, offeringTitle, permissions, ROLE_ORDER, students, studentsOf, subjectById, subjects, tahunAjaran, teacherById, teachers, type Offering } from '@/data'
-import { fetchUsers, fetchKelas, fetchMapel, fetchPengampu, createKelas, updateKelas, deleteKelas, createMapel, updateMapel, deleteMapel, createPengampu, updatePengampu, deletePengampu, fetchSiswaKelas, updateUserRole, createSiswa, updateSiswa, deleteUser, createGuru, updateGuru, fetchJurusan } from '@/services/akademik'
+import { fetchUsers, fetchKelas, fetchMapel, fetchPengampu, createKelas, updateKelas, deleteKelas, createMapel, updateMapel, deleteMapel, createPengampu, updatePengampu, deletePengampu, fetchSiswaKelas, updateUserRole, createSiswa, updateSiswa, deleteUser, createGuru, updateGuru, fetchJurusan, createJurusan, updateJurusan, deleteJurusan, fetchStats, fetchSiswaPerJurusan, updateUser } from '@/services/akademik'
 
 type F = { k: string; l: string; type?: string; options?: (string | { v: string; l: string })[]; req?: boolean; validate?: (v: string, all: Record<string, string>) => string }
 type FD = { k: string; l: string; options: string[]; get: (r: any) => string }
@@ -157,23 +157,38 @@ export function DataMapel() {
     detail={(s: any) => <><h3 className="font-extrabold text-xl">{s.name}</h3><Det items={[['Kode', s.code], ['Kelompok', s.category], ['Guru utama', teachers.find(t => t.id === s.teacher_id)?.full_name || '-']]} /></>} />
 }
 export function DataJurusan() {
-  return <Crud singular="Jurusan" title="Data Jurusan" subtitle="Kelola program keahlian" rows={jurusan} searchText={(j) => j.nama + j.kode}
-    cols={[{ key: 'nama', header: 'Program Keahlian', sort: (j: any) => j.nama, render: (j: any) => <b>{j.nama}</b> }, { key: 'kode', header: 'Kode', render: (j: any) => <Badge tone="green">{j.kode}</Badge> }, { key: 'kaprodi', header: 'Kepala Program' }, { key: 'siswa', header: 'Jumlah Siswa (data contoh)', sort: (j: any) => j.siswa }]}
-    fields={[{ k: 'nama', l: 'Nama Program Keahlian', req: true }, { k: 'kode', l: 'Kode', req: true }, { k: 'kaprodi', l: 'Kepala Program', req: true }]} toForm={(j) => ({ nama: j.nama, kode: j.kode, kaprodi: j.kaprodi })} fromForm={(f, o) => ({ ...(o ?? { id: f.kode, siswa: 0 }), ...f } as any)}
-    detail={(j) => <><h3 className="font-extrabold text-xl">{j.nama}</h3><Det items={[['Kode', j.kode], ['Kepala Program', j.kaprodi], ['Jumlah kelas', kelas.filter((k) => k.jurusan === j.id).length], ['Jumlah siswa', j.siswa]]} /></>} />
+  return <Crud singular="Jurusan" title="Data Jurusan" subtitle="Kelola program keahlian" rows={[]}
+    onFetch={fetchJurusan}
+    onCreate={createJurusan}
+    onUpdate={updateJurusan}
+    onDelete={deleteJurusan}
+    searchText={(j: any) => j.nama + j.kode}
+    cols={[{ key: 'nama', header: 'Program Keahlian', sort: (j: any) => j.nama, render: (j: any) => <b>{j.nama}</b> }, { key: 'kode', header: 'Kode', render: (j: any) => <Badge tone="green">{j.kode}</Badge> }]}
+    fields={[{ k: 'nama', l: 'Nama Program Keahlian', req: true }, { k: 'kode', l: 'Kode', req: true }]} 
+    toForm={(j: any) => ({ nama: j.nama, kode: j.kode })} 
+    fromForm={(f, o) => ({ ...(o ?? {}), nama: f.nama, kode: f.kode } as any)}
+    detail={(j: any) => <><h3 className="font-extrabold text-xl">{j.nama}</h3><Det items={[['Kode', j.kode]]} /></>} />
 }
 
 export function TUDashboard() {
   const nav = useNavigate()
-  const perJ = jurusan.map((j) => ({ n: j.kode, v: j.id === 'RPL' ? 412 : j.id === 'TKJ' ? 361 : 307 })); const perT = [{ n: 'Kelas X', v: 372, c: '#0B3D5F' }, { n: 'Kelas XI', v: 361, c: '#2563EB' }, { n: 'Kelas XII', v: 347, c: '#F59E0B' }]
+  const [stats, setStats] = useState({ siswa: 0, guru: 0, kelas: 0, mapel: 0 });
+  const [perJ, setPerJ] = useState<any[]>([]);
+  const perT = [{ n: 'Kelas X', v: 372, c: '#0B3D5F' }, { n: 'Kelas XI', v: 361, c: '#2563EB' }, { n: 'Kelas XII', v: 347, c: '#F59E0B' }]
   const warn = [['7 siswa belum memiliki kelas', '/tu/siswa', 'Tetapkan Kelas'], ['2 kelas belum memiliki wali kelas', '/tu/kelas', 'Tetapkan Wali'], ['3 guru belum memiliki mata pelajaran', '/tu/penugasan', 'Tugaskan Guru']]
   const short = [['Tambah Siswa', <GraduationCap />, '/tu/siswa'], ['Tambah Guru', <Users />, '/tu/guru'], ['Atur Jadwal', <CalendarDays />, '/tu/jadwal'], ['Penugasan Guru', <ClipboardCheck />, '/tu/penugasan']] as const
+
+  useEffect(() => {
+    fetchStats().then(setStats).catch(() => {});
+    fetchSiswaPerJurusan().then(setPerJ).catch(() => {});
+  }, []);
+
   return (
     <div><PageHeader crumbs={[{ l: 'Dashboard' }]} title="Dashboard Tata Usaha" subtitle="Ringkasan data akademik SMK Negeri 2 Indramayu • Kamis, 29 Oktober 2026" />
-      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6"><Stat icon={<GraduationCap />} label="Total Siswa" value="1.080" trend="+2,4%" /><Stat icon={<Users />} label="Total Guru" value="64" tone="blue" trend="+1,6%" /><Stat icon={<School />} label="Total Kelas" value="36" tone="amber" /><Stat icon={<BookOpen />} label="Mata Pelajaran" value="24" tone="green" /></div>
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6"><Stat icon={<GraduationCap />} label="Total Siswa" value={stats.siswa} trend="+2,4%" /><Stat icon={<Users />} label="Total Guru" value={stats.guru} tone="blue" trend="+1,6%" /><Stat icon={<School />} label="Total Kelas" value={stats.kelas} tone="amber" /><Stat icon={<BookOpen />} label="Mata Pelajaran" value={stats.mapel} tone="green" /></div>
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">{short.map(([l, i, to]) => <Card key={l} hover onClick={() => nav(to)} className="flex items-center gap-4 !p-5"><span className="w-12 h-12 rounded-2xl bg-primary-light text-primary-dark flex items-center justify-center">{i}</span><b>{l}</b></Card>)}</div>
       <div className="grid lg:grid-cols-[1fr_380px] gap-6 mb-6"><Card><CardTitle>Siswa per Jurusan</CardTitle><div style={{ height: 270 }}><ResponsiveContainer><BarChart data={perJ}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="n" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="v" name="Jumlah Siswa" radius={[12, 12, 0, 0]} fill="#0B3D5F" barSize={64} /></BarChart></ResponsiveContainer></div></Card>
-        <Card><CardTitle>Siswa per Tingkat</CardTitle><div className="relative" style={{ height: 270 }}><ResponsiveContainer><PieChart><Pie data={perT} dataKey="v" nameKey="n" innerRadius={66} outerRadius={96} paddingAngle={3} cornerRadius={8}>{perT.map((p) => <Cell key={p.n} fill={p.c} />)}</Pie><Tooltip /><Legend iconType="circle" /></PieChart></ResponsiveContainer><div className="absolute inset-0 -mt-4 flex flex-col items-center justify-center pointer-events-none"><b className="text-2xl">1.080</b><span className="text-xs text-muted">Siswa</span></div></div></Card></div>
+        <Card><CardTitle>Siswa per Tingkat</CardTitle><div className="relative" style={{ height: 270 }}><ResponsiveContainer><PieChart><Pie data={perT} dataKey="v" nameKey="n" innerRadius={66} outerRadius={96} paddingAngle={3} cornerRadius={8}>{perT.map((p) => <Cell key={p.n} fill={p.c} />)}</Pie><Tooltip /><Legend iconType="circle" /></PieChart></ResponsiveContainer><div className="absolute inset-0 -mt-4 flex flex-col items-center justify-center pointer-events-none"><b className="text-2xl">{stats.siswa}</b><span className="text-xs text-muted">Siswa</span></div></div></Card></div>
       <div className="grid lg:grid-cols-2 gap-6"><Card><CardTitle right={<Link className="text-sm font-bold text-accent" to="/tu/log">Lihat semua</Link>}>Log Aktivitas Terbaru</CardTitle><ul className="space-y-3">{logs.slice(0, 5).map((l) => <li key={l.id} className="flex gap-3 items-start"><Avatar name={l.user} size={34} /><div className="flex-1 text-sm"><b>{l.user}</b> <span className="text-muted">{l.aksi}</span><div className="text-xs text-muted">{l.waktu}</div></div></li>)}</ul></Card>
         <Card><CardTitle icon={<AlertTriangle size={20} className="text-warn" />}>Peringatan Data</CardTitle><ul className="space-y-3">{warn.map(([t, to, a]) => <li key={t} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-3.5"><AlertTriangle size={18} className="text-amber-600 shrink-0" /><span className="flex-1 text-sm font-semibold">{t}</span><Link to={to} className="text-sm font-bold text-accent hover:underline whitespace-nowrap">{a}</Link></li>)}</ul></Card></div></div>
   )
@@ -182,17 +197,47 @@ export function TUDashboard() {
 // ---------- Penugasan ----------
 const tm = (t: string) => { const [h, m] = t.split('.').map(Number); return h * 60 + m }
 export function PenugasanGuru() {
-  const { toast } = useApp(); const [asg, setAsg] = useState<Record<string, string>>(() => Object.fromEntries(offerings.map((o) => [o.id, o.guru]))); const [kl, setKl] = useState('Semua'); const [sem, setSem] = useState('Semester Ganjil 2026/2027'); const [bulk, setBulk] = useState<string[] | null>(null); const [bg, setBg] = useState('t1')
-  const conflicts = useMemo(() => { const c: Record<string, string> = {}; offerings.forEach((a) => offerings.forEach((b) => { if (a.id < b.id && asg[a.id] === asg[b.id]) a.jadwal.forEach((x) => b.jadwal.forEach((y) => { if (x.hari === y.hari && tm(x.mulai) < tm(y.selesai) && tm(y.mulai) < tm(x.selesai)) { c[a.id] = `Bentrok dengan ${subjectById(b.subjectId).nama} ${b.kode}`; c[b.id] = `Bentrok dengan ${subjectById(a.subjectId).nama} ${a.kode}` } })) })); return c }, [asg])
-  const rows = offerings.filter((o) => kl === 'Semua' || kelasById(o.kelasId).nama === kl)
-  const nC = Object.keys(conflicts).length
+  const { toast } = useApp();
+  const [offerings, setOfferings] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [classList, setClassList] = useState<any[]>([]);
+  const [kl, setKl] = useState('Semua');
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [p, t, k] = await Promise.all([fetchPengampu(), fetchUsers('guru'), fetchKelas()]);
+      setOfferings(p);
+      setTeachers(t);
+      setClassList(k);
+    } catch (err: any) {
+      toast(err.message, 'err');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const updateAsg = async (id: string, guruId: string) => {
+    try {
+      await updatePengampu(id, { id_guru: guruId });
+      setOfferings(offerings.map(o => o.id_pengampu === id ? { ...o, id_guru: guruId } : o));
+      toast('Penugasan guru diperbarui');
+    } catch (err: any) {
+      toast(err.message, 'err');
+    }
+  };
+
+  const rows = offerings.filter((o) => kl === 'Semua' || o.kelas?.name === kl);
+
   return (
-    <div><PageHeader crumbs={useCrumbs({ l: 'Penugasan Guru' })} title="Penugasan Guru" subtitle="Tetapkan guru pengampu untuk setiap mata pelajaran dan kelas per semester" actions={<Select aria-label="Semester" value={sem} onChange={(e) => setSem(e.target.value)} options={['Semester Ganjil 2026/2027', 'Semester Genap 2025/2026']} className="!w-64" />} />
-      {nC > 0 && <div role="alert" className="flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 mb-5"><AlertTriangle className="shrink-0 mt-0.5" /><div className="text-sm"><b>Peringatan konflik jadwal.</b> Terdapat {nC} penugasan dengan jadwal yang bertabrakan. Periksa baris bertanda merah.</div></div>}
-      <DataTable rows={rows} pageSize={10} selectable searchText={(o) => offeringTitle(o) + teacherById(asg[o.id]).nama} searchPlaceholder="Cari mata pelajaran, kelas, atau guru" filters={<Select aria-label="Kelas" value={kl} onChange={(e) => setKl(e.target.value)} options={['Semua', ...kelas.map((k) => k.nama)]} className="!w-40 !h-11" />}
-        bulk={[{ l: 'Tetapkan Guru', icon: <UserPlus size={15} />, onClick: (ids) => setBulk(ids as string[]) }]}
-        cols={[{ key: 'm', header: 'Mata Pelajaran', sort: (o: Offering) => subjectById(o.subjectId).nama, render: (o: Offering) => <b>{subjectById(o.subjectId).nama}</b> }, { key: 'k', header: 'Kelas', sort: (o: Offering) => kelasById(o.kelasId).nama, render: (o: Offering) => kelasById(o.kelasId).nama }, { key: 'j', header: 'Jadwal', render: (o: Offering) => o.jadwal.map((j) => `${HARI[j.hari].slice(0, 3)} ${j.mulai}`).join(', ') }, { key: 'g', header: 'Guru Pengampu', render: (o: Offering) => <div><select aria-label="Guru pengampu" value={asg[o.id]} onChange={(e) => { setAsg({ ...asg, [o.id]: e.target.value }); toast('Penugasan guru diperbarui') }} className={cn('h-10 rounded-xl border px-3 text-sm bg-white', conflicts[o.id] ? 'border-danger bg-red-50' : 'border-line')}>{teachers.map((t) => <option key={t.id} value={t.id}>{t.sapaan}</option>)}</select>{conflicts[o.id] && <div className="text-xs text-danger font-semibold mt-1">{conflicts[o.id]}</div>}</div> }]} />
-      <Modal open={!!bulk} onClose={() => setBulk(null)} title={`Tetapkan Guru untuk ${bulk?.length} Kelas`} footer={<><Btn variant="outline" onClick={() => setBulk(null)}>Batal</Btn><Btn onClick={() => { setAsg({ ...asg, ...Object.fromEntries(bulk!.map((i) => [i, bg])) }); setBulk(null); toast('Penugasan massal berhasil disimpan') }}>Terapkan</Btn></>}><Select label="Guru Pengampu" value={bg} onChange={(e) => setBg(e.target.value)} options={teachers.map((t) => ({ v: t.id, l: t.nama }))} /><p className="text-sm text-muted">Guru yang dipilih akan ditetapkan pada seluruh kelas terpilih. Sistem akan menandai bentrok jadwal jika ada.</p></Modal></div>
+    <div><PageHeader crumbs={useCrumbs({ l: 'Penugasan Guru' })} title="Penugasan Guru" subtitle="Tetapkan guru pengampu untuk setiap mata pelajaran dan kelas" />
+      <DataTable rows={rows} pageSize={10} loading={loading} searchText={(o) => (o.mapel?.name || '') + (o.kelas?.name || '')} searchPlaceholder="Cari mata pelajaran atau kelas"
+        filters={<Select aria-label="Kelas" value={kl} onChange={(e) => setKl(e.target.value)} options={['Semua', ...classList.map((k) => k.name)]} className="!w-40 !h-11" />}
+        cols={[{ key: 'm', header: 'Mata Pelajaran', render: (o: any) => <b>{o.mapel?.name}</b> }, { key: 'k', header: 'Kelas', render: (o: any) => o.kelas?.name }, { key: 'g', header: 'Guru Pengampu', render: (o: any) => <select aria-label="Guru pengampu" value={o.id_guru} onChange={(e) => updateAsg(o.id_pengampu, e.target.value)} className="h-10 rounded-xl border border-line px-3 text-sm bg-white">{teachers.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}</select> }]} />
+    </div>
   )
 }
 

@@ -55,21 +55,25 @@ export interface SiswaKelas {
 
 // ==================== USERS ====================
 export const fetchUsers = async (role?: string) => {
-  let query = supabase.from('users').select('*');
+  let query = supabase.from('profiles').select('*');
   if (role) query = query.eq('role', role);
   const { data, error } = await query.order('full_name', { ascending: true });
-  if (error) throw error;
+  if (error) {
+    console.error('FetchUsers Error:', error);
+    throw error;
+  }
+  console.log('FetchUsers Data:', data);
   return data as User[];
 };
 
 export const fetchUserById = async (id: string) => {
-  const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
   if (error) throw error;
   return data as User;
 };
 
 export const updateUser = async (id: string, updates: Partial<User>) => {
-  const { error } = await supabase.from('users').update(updates).eq('id', id);
+  const { error } = await supabase.from('profiles').update(updates).eq('id', id);
   if (error) throw error;
 };
 
@@ -183,7 +187,7 @@ export const fetchPengampu = async (kelasId?: string, guruId?: string) => {
     .from('pengampu')
     .select(`
       *,
-      guru:users!pengampu_id_guru_fkey(full_name, role),
+      guru:profiles!pengampu_id_guru_fkey(full_name, role),
       mapel:subjects!pengampu_id_mapel_fkey(name, code),
       kelas:classes!pengampu_id_kelas_fkey(name, grade, major)
     `);
@@ -216,7 +220,7 @@ export const fetchSiswaKelas = async (kelasId?: string) => {
     .from('siswa_kelas')
     .select(`
       *,
-      user:users!siswa_kelas_id_siswa_fkey(full_name, email, role, status),
+      user:profiles!siswa_kelas_id_siswa_fkey(full_name, email, role, status),
       kelas:classes!siswa_kelas_id_kelas_fkey(name, grade, major)
     `);
   if (kelasId) query = query.eq('id_kelas', kelasId);
@@ -230,7 +234,7 @@ export const getSiswaByKelas = async (kelasId: string) => {
     .from('siswa_kelas')
     .select(`
       *,
-      user:users!siswa_kelas_id_siswa_fkey(full_name, email, role, status, nip_nis)
+      user:profiles!siswa_kelas_id_siswa_fkey(full_name, email, role, status, nip_nis)
     `)
     .eq('id_kelas', kelasId)
     .order('user->>full_name', { ascending: true });
@@ -240,17 +244,29 @@ export const getSiswaByKelas = async (kelasId: string) => {
 
 // ==================== JURUSAN (dari classes.major) ====================
 export const fetchJurusan = async () => {
-  const { data, error } = await supabase
-    .from('classes')
-    .select('major')
-    .not('major', 'is', null);
+  const { data, error } = await supabase.from('jurusan').select('*').order('kode');
   if (error) throw error;
-  const unique = Array.from(new Set(data?.map((c) => c.major) || []));
-  return unique.filter(Boolean) as string[];
+  return data;
+};
+
+export const createJurusan = async (jurusan: any) => {
+  const { data, error } = await supabase.from('jurusan').insert(jurusan).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateJurusan = async (id: string, updates: any) => {
+  const { error } = await supabase.from('jurusan').update(updates).eq('id', id);
+  if (error) throw error;
+};
+
+export const deleteJurusan = async (id: string) => {
+  const { error } = await supabase.from('jurusan').delete().eq('id', id);
+  if (error) throw error;
 };
 
 export const createSiswa = async (siswa: any) => {
-  const { data: user, error: e1 } = await supabase.from('users').insert({
+  const { data: user, error: e1 } = await supabase.from('profiles').insert({
     full_name: siswa.nama,
     email: siswa.email,
     role: 'siswa',
@@ -270,7 +286,7 @@ export const createSiswa = async (siswa: any) => {
 };
 
 export const updateSiswa = async (id: string, siswa: any) => {
-  const { error: e1 } = await supabase.from('users').update({
+  const { error: e1 } = await supabase.from('profiles').update({
     full_name: siswa.nama,
     email: siswa.email,
     status: siswa.status,
@@ -285,12 +301,12 @@ export const updateSiswa = async (id: string, siswa: any) => {
 };
 
 export const deleteUser = async (id: string) => {
-  const { error } = await supabase.from('users').delete().eq('id', id);
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
   if (error) throw error;
 };
 
 export const createGuru = async (guru: any) => {
-  const { data, error } = await supabase.from('users').insert({
+  const { data, error } = await supabase.from('profiles').insert({
     full_name: guru.nama,
     email: guru.email,
     role: 'guru',
@@ -302,7 +318,7 @@ export const createGuru = async (guru: any) => {
 };
 
 export const updateGuru = async (id: string, guru: any) => {
-  const { error } = await supabase.from('users').update({
+  const { error } = await supabase.from('profiles').update({
     full_name: guru.nama,
     email: guru.email,
     status: guru.status,
@@ -328,7 +344,31 @@ export const fromPengampuToOffering = (p: Pengampu & { guru?: User; mapel?: Subj
   arsip: false,
 });
 
-export const getGuruOfferings = async (guruId: string) => {
-  const p = await fetchPengampu(undefined, guruId);
-  return p.map(fromPengampuToOffering);
+export const fetchStats = async () => {
+  const [siswa, guru, kelas, mapel] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'siswa'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'guru'),
+    supabase.from('classes').select('*', { count: 'exact', head: true }),
+    supabase.from('subjects').select('*', { count: 'exact', head: true })
+  ]);
+  return {
+    siswa: siswa.count || 0,
+    guru: guru.count || 0,
+    kelas: kelas.count || 0,
+    mapel: mapel.count || 0
+  };
+};
+
+export const fetchSiswaPerJurusan = async () => {
+  const { data, error } = await supabase.rpc('get_siswa_per_jurusan');
+  if (error) {
+    // Fallback if RPC not exists yet
+    const { data: jurusans } = await supabase.from('jurusan').select('kode, nama');
+    const { data: siswas } = await supabase.from('siswa_kelas').select('id_kelas, kelas:classes(jurusan_id)');
+    return (jurusans || []).map(j => ({
+      n: j.kode,
+      v: (siswas || []).filter((s: any) => s.kelas?.jurusan_id === j.id).length
+    }));
+  }
+  return data;
 };

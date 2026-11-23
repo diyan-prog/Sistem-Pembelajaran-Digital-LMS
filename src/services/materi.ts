@@ -173,7 +173,7 @@ export const fetchPengumpulanTugas = async (tugasId: string) => {
     .from('pengumpulan_tugas')
     .select(`
       *,
-      siswa:users!pengumpulan_tugas_id_siswa_fkey(full_name, nip_nis)
+      siswa:profiles!pengumpulan_tugas_id_siswa_fkey(full_name, nip_nis)
     `)
     .eq('id_tugas', tugasId)
     .order('waktu_kumpul', { ascending: false });
@@ -267,7 +267,7 @@ export const fetchHasilKuis = async (kuisId: string) => {
     .from('hasil_kuis')
     .select(`
       *,
-      siswa:users!hasil_kuis_id_siswa_fkey(full_name, nip_nis)
+      siswa:profiles!hasil_kuis_id_siswa_fkey(full_name, nip_nis)
     `)
     .eq('id_kuis', kuisId)
     .order('nilai', { ascending: false });

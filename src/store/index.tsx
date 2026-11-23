@@ -73,8 +73,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (profile) {
       const r = (profile.role?.toLowerCase() || 'siswa') as Role;
       login(r, profile);
+    } else {
+      // Fallback if profile doesn't exist
+      login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
     }
-  }, [login]);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

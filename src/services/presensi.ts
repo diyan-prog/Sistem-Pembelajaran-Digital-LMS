@@ -40,7 +40,7 @@ export const fetchPresensi = async (pengampuId: string) => {
     .from('presensi')
     .select(`
       *,
-      siswa:users!presensi_id_siswa_fkey(full_name, nip_nis)
+      siswa:profiles!presensi_id_siswa_fkey(full_name, nip_nis)
     `)
     .eq('id_pengampu', pengampuId)
     .order('tanggal', { ascending: false });
@@ -162,7 +162,7 @@ export const fetchActivityLog = async (limit = 100) => {
     .from('activity_log')
     .select(`
       *,
-      user:users!activity_log_user_id_fkey(full_name, role)
+      user:profiles!activity_log_user_id_fkey(full_name, role)
     `)
     .order('created_at', { ascending: false })
     .limit(limit);
