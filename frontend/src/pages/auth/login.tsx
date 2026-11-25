@@ -53,19 +53,23 @@ export function Login() {
 
       if (authError || !authData.user) throw new Error('Username atau password salah');
 
-      // 2. Ambil role dari tabel profiles menggunakan sesi pengguna dan RLS
+      // 2. Ambil profil lengkap agar role dan nama pengguna sinkron dengan context
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', authData.user.id)
         .single();
 
-      const dbRole = profile?.role || '';
-      const r: Role = toRole(dbRole);
-
+      let r: Role;
+      if (profile) {
+        r = toRole(profile.role);
+        login(r, profile);
+      } else {
+        r = 'tu';
+        login(r, { id: authData.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
+      }
       setIsLoading(false);
-      login(r, profile);
-      nav(homePath(r));
+      nav(homePath(r), { replace: true });
     } catch (err: any) {
       setError(err.message);
       setIsLoading(false);
