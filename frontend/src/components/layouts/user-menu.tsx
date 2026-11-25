@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Crown, HelpCircle, ImageIcon, LogOut, Settings, UserCog } from 'lucide-react'
 import { Avatar, Dropdown, cn } from '@/components/ui'
-import { ROLES, type Role } from '@/lib/roles'
+import { ROLES, toRole } from '@/lib/roles'
 import { useApp } from '@/context'
 
 export function UserMenu({ dark = true }: { dark?: boolean }) {
   const { userData, logout } = useApp(); 
   const name = userData?.full_name || userData?.nama_lengkap || 'User';
-  const cfg = ROLES[userData?.role?.toLowerCase() as Role] || ROLES.tu;
+  const cfg = ROLES[toRole(userData?.role)] || ROLES.tu;
   const nav = useNavigate()
   const items = [{ l: 'Kelola Akun', i: <UserCog size={18} />, to: 'akun' }, ...(userData?.role?.toLowerCase() === 'guru' ? [{ l: 'Media Library', i: <ImageIcon size={18} />, to: 'media' }] : []), { l: 'User Guide', i: <HelpCircle size={18} />, to: 'panduan' }, { l: 'Pengaturan', i: <Settings size={18} />, to: 'pengaturan' }]
   return (

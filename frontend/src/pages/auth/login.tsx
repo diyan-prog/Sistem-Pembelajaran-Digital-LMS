@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/layouts';
-import { ROLES, type Role } from '@/lib/roles';
+import { ROLES, toRole, homePath } from '@/lib/roles';
 import { useApp } from '@/context';
 import { supabase } from '@/lib/supabase';
 
@@ -14,17 +14,10 @@ export function Login() {
     const handleAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      const dbRole = profile?.role || '';
-      const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
-      let r: Role =
-        normalized === 'tata-usaha' || normalized === 'admin' || normalized === 'super-admin' ? 'tu' :
-        normalized.includes('guru') ? 'guru' :
-        normalized.includes('wali') ? 'wali' :
-        normalized.includes('kepala') ? 'kepsek' :
-        'siswa';
-      login(r, null);
-      nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      const r: Role = toRole(profile?.role);
+      login(r, profile);
+      nav(homePath(r));
       }
     };
     handleAuth();
@@ -61,17 +54,11 @@ export function Login() {
         .single();
 
       const dbRole = profile?.role || '';
-      const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
-      let r: Role =
-        normalized === 'tata-usaha' || normalized === 'admin' || normalized === 'super-admin' ? 'tu' :
-        normalized.includes('guru') ? 'guru' :
-        normalized.includes('wali') ? 'wali' :
-        normalized.includes('kepala') ? 'kepsek' :
-        'siswa';
+      const r: Role = toRole(dbRole);
 
       setIsLoading(false);
-      login(r, null);
-      nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
+      login(r, profile);
+      nav(homePath(r));
     } catch (err: any) {
       setError(err.message);
       setIsLoading(false);

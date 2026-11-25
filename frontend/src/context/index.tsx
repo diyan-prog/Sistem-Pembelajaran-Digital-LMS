@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { notifGuru, notifUmum, notifikasi } from '@/mocks'
-import { ROLES, type Role } from '@/lib/roles'
+import { ROLES, toRole, type Role } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
 
 type ToastT = { id: number; msg: string; type: 'ok' | 'err' | 'info' | 'warn' }
@@ -24,7 +24,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(() => {
     const stored = localStorage.getItem('spd-role')
     if (!stored || stored === 'undefined') return null
-    return stored as Role
+    return toRole(stored)
   })
   const [userData, setUserData] = useState<any>(() => {
     const stored = localStorage.getItem('spd-user')
@@ -46,7 +46,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleSession = useCallback(async (session: any) => {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
     if (profile) {
-      const r = (profile.role?.toLowerCase() || 'siswa') as Role;
+      const dbRole = profile.role;
+      const r: Role = toRole(dbRole);
       login(r, profile);
     } else {
       // Fallback if profile doesn't exist

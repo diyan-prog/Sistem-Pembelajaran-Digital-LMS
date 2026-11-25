@@ -4,6 +4,20 @@ import { ME_SISWA } from '@/mocks'
 export type Role = 'siswa' | 'guru' | 'wali' | 'kepsek' | 'tu'
 export type Menu = { label: string; icon: LucideIcon; to: string }
 
+/** Normalisasi role dari DB ke enum frontend. */
+export function toRole(value: unknown): Role {
+  const s = String(value ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-')
+  if (s === 'tu' || s === 'admin' || s === 'super-admin' || s === 'tata-usaha') return 'tu'
+  if (s.includes('kepala')) return 'kepsek'
+  if (s.includes('wali')) return 'wali'
+  if (s.includes('guru')) return 'guru'
+  return 'siswa'
+}
+
+export function homePath(role: Role): string {
+  return ROLES[role].base + (role === 'tu' ? '/dashboard' : '/beranda')
+}
+
 export const ROLES: Record<Role, { label: string; chip: string; base: string; nama: string; sub: string; menus: Menu[] }> = {
   siswa: { label: 'Siswa', chip: 'SISWA', base: '/siswa', nama: ME_SISWA.nama, sub: 'XI RPL 1', menus: [
     { label: 'Beranda', icon: Home, to: '/siswa/beranda' }, { label: 'Kelas Saya', icon: BookOpen, to: '/siswa/kelas' }, { label: 'Tugas & Kuis', icon: ClipboardList, to: '/siswa/tugas' },
