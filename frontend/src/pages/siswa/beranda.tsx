@@ -5,8 +5,8 @@ import { Badge, Card, CardTitle, Empty, cn } from '@/components/ui'
 import { useApp } from '@/context'
 import { supabase } from '@/lib/supabase'
 import { fmtTglPendek, siswaOfferings } from '@/mocks'
-import { fetchPengumuman, type Pengumuman } from '@/services/pengumuman'
-import { fetchSiswaClasses } from '@/services/siswa'
+import { fetchPengumumanGo } from '@/services/api-go';
+import { fetchSiswaClassesGo } from '@/services/siswa';
 import { fromPengampuToOffering } from '@/services/akademik'
 import { ClassBrowser, ScheduleCard } from '@/pages/shared'
 import { shortBatas } from './deadline'
@@ -58,7 +58,7 @@ export function PerluDikerjakan({ limit }: { limit?: number }) {
 
 export function SiswaBeranda() {
   const { userData } = useApp()
-  const [news, setNews] = useState<Pengumuman[]>([])
+  const [news, setNews] = useState<any[]>([])
   const [offerings, setOfferings] = useState<any[]>([])
 
   const [loading, setLoading] = useState(true)
@@ -67,38 +67,14 @@ export function SiswaBeranda() {
     const fetchAll = async () => {
       try {
         setLoading(true)
-        const [n, sc] = await Promise.all([
-          fetchPengumuman('siswa'),
-          userData?.id ? fetchSiswaClasses(userData.id) : Promise.resolve([])
-        ])
-        setNews(n.slice(0, 3))
-        
-        // Fallback: If DB returns empty schedule or empty classes, map local mock data to keep UI functional
-        if (!sc || sc.length === 0) {
-          setOfferings(siswaOfferings('k2'))
-        } else {
-          const offs = sc.flatMap((item: any) => {
-            const cls = item.classes
-            if (!cls || !cls.pengampu) return []
-            const pengampus = Array.isArray(cls.pengampu) ? cls.pengampu : [cls.pengampu]
-            return pengampus.map((p: any) => ({
-              id: p.id_pengampu,
-              kelasId: cls.id,
-              subjectId: p.id_mapel,
-              kode: cls.name,
-              guru: p.id_guru,
-              co: [],
-              jadwal: [{ hari: (new Date()).getDay() || 1, mulai: '07.00', selesai: '08.40', ruang: 'R.501', mode: 'Offline', sesi: 1 }],
-              done: 10,
-              total: 32,
-              hadir: 8,
-              rata: 85,
-              semester: '2026/2027',
-              arsip: false
-            }))
-          })
-          setOfferings(offs.length > 0 ? offs : siswaOfferings('k2'))
-        }
+        const [pengumuan, siswaClasses] = await Promise.all([
+          fetchPengumumanGo('siswa'),
+          userData?.id ? fetchSiswaClassesGo(userData.id) : Promise.resolve([])
+        ]);
+        setNews(pengumuan.slice(0, 3));
+
+        const offs = siswaClasses.length > 0 ? siswaClasses : siswaOfferings('k2');
+        setOfferings(offs);
       } catch (err) {
         console.error('Fetch error:', err)
         setOfferings(siswaOfferings('k2'))

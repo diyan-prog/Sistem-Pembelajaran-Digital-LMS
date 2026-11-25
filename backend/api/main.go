@@ -39,6 +39,27 @@ type Mapel struct {
 	Kode string `json:"kode"`
 }
 
+type PengumumanGo struct {
+	ID             string   `json:"id"`
+	Judul          string   `json:"judul"`
+	Isi            string   `json:"isi"`
+	Kategori       *string  `json:"kategori"`
+	Penting        bool     `json:"penting"`
+	DibuatOleh     *string  `json:"dibuat_oleh"`
+	DibuatOlehNama *string  `json:"dibuat_oleh_nama"`
+	TargetRole     *string  `json:"target_role"`
+	CreatedAt      string   `json:"created_at"`
+}
+
+type SiswaPengampuGo struct {
+	IDPengampu    string  `json:"id_pengampu"`
+	MapelName     string  `json:"mapel_name"`
+	MapelCode     string  `json:"mapel_code"`
+	GuruName      *string `json:"guru_name"`
+	KelasName     string  `json:"kelas_name"`
+	TahunAjaran   *string `json:"tahun_ajaran"`
+}
+
 type Kelas struct {
 	ID   string `json:"id"`
 	Nama string `json:"nama"`
@@ -293,6 +314,63 @@ func main() {
 				continue
 			}
 			list = append(list, k)
+		}
+		return c.JSON(http.StatusOK, list)
+	})
+
+	// ---------- PENGUMUMAN (siswa) ----------
+	api.GET("/pengumuman", func(c echo.Context) error {
+		role := c.QueryParam("role")
+		rows, err := dbPool.Query(context.Background(), `
+			SELECT p.id, p.judul, p.isi, p.kategori, p.penting,
+			       p.dibuat_oleh, pr.nama_lengkap, p.target_role, p.created_at
+			FROM pengumuman p
+			LEFT JOIN profiles pr ON pr.id = p.dibuat_oleh
+			WHERE p.target_role IS NULL OR p.target_role = 'all' OR p.target_role = $1
+			ORDER BY p.created_at DESC
+			LIMIT 20
+		`, role)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		defer rows.Close()
+
+		var list []PengumumanGo
+		for rows.Next() {
+			var p PengumumanGo
+			if err := rows.Scan(&p.ID, &p.Judul, &p.Isi, &p.Kategori, &p.Penting,
+				&p.DibuatOleh, &p.DibuatOlehNama, &p.TargetRole, &p.CreatedAt); err != nil {
+				continue
+			}
+			list = append(list, p)
+		}
+		return c.JSON(http.StatusOK, list)
+	})
+
+	// ---------- SISWA PENGAMPU (kelas yang diikuti siswa) ----------
+	api.GET("/siswa/:id/pengampu", func(c echo.Context) error {
+		id := c.Param("id")
+		rows, err := dbPool.Query(context.Background(), `
+			SELECT p.id_pengampu, s.name, s.code, g.full_name, cl.name, sk.tahun_ajaran
+			FROM siswa_kelas sk
+			JOIN classes cl ON cl.id = sk.id_kelas
+			JOIN pengampu p ON p.id_kelas = sk.id_kelas
+			JOIN subjects s ON s.id = p.id_mapel
+			LEFT JOIN profiles g ON g.id = p.id_guru
+			WHERE sk.id_siswa = $1
+		`, id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		defer rows.Close()
+
+		var list []SiswaPengampuGo
+		for rows.Next() {
+			var p SiswaPengampuGo
+			if err := rows.Scan(&p.IDPengampu, &p.MapelName, &p.MapelCode, &p.GuruName, &p.KelasName, &p.TahunAjaran); err != nil {
+				continue
+			}
+			list = append(list, p)
 		}
 		return c.JSON(http.StatusOK, list)
 	})

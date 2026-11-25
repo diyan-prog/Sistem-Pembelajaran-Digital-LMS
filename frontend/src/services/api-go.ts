@@ -88,3 +88,35 @@ export interface KelasGo {
 
 export const fetchKelasGo = async (token?: string): Promise<KelasGo[]> =>
   request('/kelas', {}, token);
+
+// ==================== PENGUMUMAN ====================
+export interface PengumumanGo {
+  id: string;
+  judul: string;
+  isi: string;
+  kategori: string | null;
+  penting: boolean;
+  dibuat_oleh: string | null;
+  dibuat_oleh_nama: string | null;
+  target_role: string | null;
+  created_at: string;
+}
+
+export const fetchPengumumanGo = async (role?: string, token?: string): Promise<PengumumanGo[]> => {
+  const url = new URL(`${BASE_URL}/pengumuman`);
+  if (role) url.searchParams.set('role', role);
+  return request(url.toString(), {}, token);
+};
+
+// ==================== SISWA KELAS (pengampu per siswa) ====================
+export interface SiswaPengampuGo {
+  id_pengampu: string;
+  mapel_name: string;
+  mapel_code: string;
+  guru_name: string | null;
+  kelas_name: string;
+  tahun_ajaran: string | null;
+}
+
+export const fetchSiswaPengampuGo = async (id: string, token?: string): Promise<SiswaPengampuGo[]> =>
+  request(`/siswa/${id}/pengampu`, {}, token);
