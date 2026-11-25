@@ -3,6 +3,7 @@
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
  */
 import { supabase } from '@/lib/supabase';
+import { fetchGuruGo, fetchSiswaGo, fetchMapelGo } from './api-go';
 import type { Slot } from '@/mocks';
 
 // ==================== TYPES ====================

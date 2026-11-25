@@ -15,17 +15,33 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-type UserProfile struct {
-	ID        string  `json:"id"`
-	FullName  *string `json:"full_name"`
-	Role      *string `json:"role"`
-	Status    *string `json:"status"`
+type Siswa struct {
+	ID      string  `json:"id"`
+	Nama    *string `json:"nama"`
+	NIS     *string `json:"nis"`
+	Email   *string `json:"email"`
+	Status  *string `json:"status"`
+	KelasID *string `json:"kelas_id"`
+	Kelas   *string `json:"kelas"`
+}
+
+type Guru struct {
+	ID      string  `json:"id"`
+	Nama    *string `json:"nama"`
+	NIP     *string `json:"nip"`
+	Email   *string `json:"email"`
+	Status  *string `json:"status"`
 }
 
 type Mapel struct {
 	ID   string `json:"id"`
 	Nama string `json:"nama"`
 	Kode string `json:"kode"`
+}
+
+type Kelas struct {
+	ID   string `json:"id"`
+	Nama string `json:"nama"`
 }
 
 type SupabaseUser struct {
@@ -46,7 +62,6 @@ func SupabaseAuth() echo.MiddlewareFunc {
 
 			token := strings.TrimPrefix(authHeader, "Bearer ")
 
-			// Tembak endpoint Supabase Auth buat validasi token
 			req, _ := http.NewRequest("GET", sbURL+"/auth/v1/user", nil)
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("apikey", anonKey)
@@ -92,46 +107,161 @@ func main() {
 		return c.JSON(http.StatusOK, c.Get("user"))
 	})
 
+	// ---------- SISWA ----------
+	// GET semua siswa (join ke kelas)
+	api.GET("/siswa", func(c echo.Context) error {
+		rows, err := dbPool.Query(context.Background(), `
+			SELECT p.id, p.full_name, p.nip_nis, p.email, p.status, sk.id_kelas, cl.name
+			FROM profiles p
+			LEFT JOIN siswa_kelas sk ON sk.id_siswa = p.id
+			LEFT JOIN classes cl ON cl.id = sk.id_kelas
+			WHERE p.role = 'siswa'
+		`)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		defer rows.Close()
+
+		var list []Siswa
+		for rows.Next() {
+			var s Siswa
+			if err := rows.Scan(&s.ID, &s.Nama, &s.NIS, &s.Email, &s.Status, &s.KelasID, &s.Kelas); err != nil {
+				continue
+			}
+			list = append(list, s)
+		}
+		return c.JSON(http.StatusOK, list)
+	})
+
+	// GET siswa by ID
+	api.GET("/siswa/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		var s Siswa
+		err := dbPool.QueryRow(context.Background(), `
+			SELECT p.id, p.full_name, p.nip_nis, p.email, p.status, sk.id_kelas, cl.name
+			FROM profiles p
+			LEFT JOIN siswa_kelas sk ON sk.id_siswa = p.id
+			LEFT JOIN classes cl ON cl.id = sk.id_kelas
+			WHERE p.id = $1 AND p.role = 'siswa'
+		`, id).Scan(&s.ID, &s.Nama, &s.NIS, &s.Email, &s.Status, &s.KelasID, &s.Kelas)
+		if err != nil {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "siswa tidak ditemukan"})
+		}
+		return c.JSON(http.StatusOK, s)
+	})
+
+	// POST tambah siswa
+	api.POST("/siswa", func(c echo.Context) error {
+		type SiswaInput struct {
+			Nama    string `json:"nama"`
+			NIS     string `json:"nis"`
+			Email   string `json:"email"`
+			KelasID string `json:"kelas_id"`
+			Status  string `json:"status"`
+		}
+
+		var input SiswaInput
+		if err := c.Bind(&input); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		}
+
+		var siswaID string
+		err := dbPool.QueryRow(context.Background(),
+			"INSERT INTO profiles (full_name, email, role, status, nip_nis) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+			input.Nama, input.Email, "siswa", input.Status, input.NIS).Scan(&siswaID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		_, err = dbPool.Exec(context.Background(),
+			"INSERT INTO siswa_kelas (id_siswa, id_kelas, tahun_ajaran) VALUES ($1, $2, $3)",
+			siswaID, input.KelasID, "2026/2027")
+		if err != nil {
+			dbPool.Exec(context.Background(), "DELETE FROM profiles WHERE id = $1", siswaID)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		return c.JSON(http.StatusCreated, map[string]string{"id": siswaID})
+	})
+
+	// PUT update siswa
+	api.PUT("/siswa/:id", func(c echo.Context) error {
+		type SiswaInput struct {
+			Nama    string `json:"nama"`
+			NIS     string `json:"nis"`
+			Email   string `json:"email"`
+			KelasID string `json:"kelas_id"`
+			Status  string `json:"status"`
+		}
+
+		id := c.Param("id")
+		var input SiswaInput
+		if err := c.Bind(&input); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		}
+
+		_, err := dbPool.Exec(context.Background(),
+			"UPDATE profiles SET full_name = $1, email = $2, nip_nis = $3, status = $4 WHERE id = $5",
+			input.Nama, input.Email, input.NIS, input.Status, id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		// Hapus kelas lama lalu insert baru (aman untuk PK majemuk)
+		_, err = dbPool.Exec(context.Background(), "DELETE FROM siswa_kelas WHERE id_siswa = $1", id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		_, err = dbPool.Exec(context.Background(),
+			"INSERT INTO siswa_kelas (id_siswa, id_kelas, tahun_ajaran) VALUES ($1, $2, $3)",
+			id, input.KelasID, "2026/2027")
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		return c.JSON(http.StatusOK, map[string]string{"message": "siswa diupdate"})
+	})
+
+	// DELETE siswa
+	api.DELETE("/siswa/:id", func(c echo.Context) error {
+		id := c.Param("id")
+
+		_, err := dbPool.Exec(context.Background(), "DELETE FROM siswa_kelas WHERE id_siswa = $1", id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		_, err = dbPool.Exec(context.Background(), "DELETE FROM profiles WHERE id = $1", id)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		return c.JSON(http.StatusOK, map[string]string{"message": "siswa dihapus"})
+	})
+
+	// ---------- GURU ----------
 	api.GET("/guru", func(c echo.Context) error {
 		rows, err := dbPool.Query(context.Background(), 
-			"SELECT id, full_name, role, status FROM profiles WHERE role = 'GURU'")
+			"SELECT id, full_name, nip_nis, email, status FROM profiles WHERE role = 'guru'")
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 		defer rows.Close()
 
-		var list []UserProfile
+		var list []Guru
 		for rows.Next() {
-			var u UserProfile
-			if err := rows.Scan(&u.ID, &u.FullName, &u.Role, &u.Status); err != nil {
+			var g Guru
+			if err := rows.Scan(&g.ID, &g.Nama, &g.NIP, &g.Email, &g.Status); err != nil {
 				continue
 			}
-			list = append(list, u)
+			list = append(list, g)
 		}
 		return c.JSON(http.StatusOK, list)
 	})
 
-	api.GET("/siswa", func(c echo.Context) error {
-		rows, err := dbPool.Query(context.Background(), 
-			"SELECT id, full_name, role, status FROM profiles WHERE role = 'SISWA'")
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		}
-		defer rows.Close()
-
-		var list []UserProfile
-		for rows.Next() {
-			var u UserProfile
-			if err := rows.Scan(&u.ID, &u.FullName, &u.Role, &u.Status); err != nil {
-				continue
-			}
-			list = append(list, u)
-		}
-		return c.JSON(http.StatusOK, list)
-	})
-
+	// ---------- MAPEL (subjects) ----------
 	api.GET("/mapel", func(c echo.Context) error {
-		rows, err := dbPool.Query(context.Background(), "SELECT id, nama, kode FROM mata_pelajaran")
+		rows, err := dbPool.Query(context.Background(), "SELECT id, name, code FROM subjects ORDER BY name")
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
@@ -144,6 +274,25 @@ func main() {
 				continue
 			}
 			list = append(list, m)
+		}
+		return c.JSON(http.StatusOK, list)
+	})
+
+	// ---------- KELAS ----------
+	api.GET("/kelas", func(c echo.Context) error {
+		rows, err := dbPool.Query(context.Background(), "SELECT id, name FROM classes ORDER BY name")
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		defer rows.Close()
+
+		var list []Kelas
+		for rows.Next() {
+			var k Kelas
+			if err := rows.Scan(&k.ID, &k.Nama); err != nil {
+				continue
+			}
+			list = append(list, k)
 		}
 		return c.JSON(http.StatusOK, list)
 	})
