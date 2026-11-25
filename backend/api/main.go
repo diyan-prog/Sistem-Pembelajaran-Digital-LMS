@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/supabase-community/supabase-go"
 )
 
 type UserProfile struct {
@@ -27,10 +28,47 @@ type Mapel struct {
 	Kode string `json:"kode"`
 }
 
+type SupabaseUser struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+}
+
+func SupabaseAuth() echo.MiddlewareFunc {
+	sbURL := os.Getenv("SUPABASE_URL")
+	anonKey := os.Getenv("SUPABASE_ANON_KEY")
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Missing token"})
+			}
+
+			token := strings.TrimPrefix(authHeader, "Bearer ")
+
+			// Tembak endpoint Supabase Auth buat validasi token
+			req, _ := http.NewRequest("GET", sbURL+"/auth/v1/user", nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("apikey", anonKey)
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil || resp.StatusCode != 200 {
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid token"})
+			}
+			defer resp.Body.Close()
+
+			var user SupabaseUser
+			json.NewDecoder(resp.Body).Decode(&user)
+
+			c.Set("user", user)
+			return next(c)
+		}
+	}
+}
+
 func main() {
 	godotenv.Load()
 
-	// Pakai Pool biar lebih stabil buat banyak request
 	dbURL := os.Getenv("DB_URL")
 	dbPool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
@@ -38,30 +76,22 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	// Supabase Client
-	sbClient, err := supabase.NewClient(
-		os.Getenv("SUPABASE_URL"),
-		os.Getenv("SUPABASE_ANON_KEY"),
-		nil,
-	)
-	if err != nil {
-		log.Fatalf("Gagal inisialisasi Supabase: %v", err)
-	}
-
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// Health Check
 	e.GET("/ping", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Golang Backend Ready")
 	})
 
-	// Group API
 	api := e.Group("/api")
+	api.Use(SupabaseAuth())
 
-	// Endpoint Guru
+	api.GET("/me", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, c.Get("user"))
+	})
+
 	api.GET("/guru", func(c echo.Context) error {
 		rows, err := dbPool.Query(context.Background(), 
 			"SELECT id, full_name, role, status FROM profiles WHERE role = 'GURU'")
@@ -81,7 +111,6 @@ func main() {
 		return c.JSON(http.StatusOK, list)
 	})
 
-	// Endpoint Siswa
 	api.GET("/siswa", func(c echo.Context) error {
 		rows, err := dbPool.Query(context.Background(), 
 			"SELECT id, full_name, role, status FROM profiles WHERE role = 'SISWA'")
@@ -101,7 +130,6 @@ func main() {
 		return c.JSON(http.StatusOK, list)
 	})
 
-	// Endpoint Mata Pelajaran (Mapel)
 	api.GET("/mapel", func(c echo.Context) error {
 		rows, err := dbPool.Query(context.Background(), "SELECT id, nama, kode FROM mata_pelajaran")
 		if err != nil {
@@ -120,13 +148,11 @@ func main() {
 		return c.JSON(http.StatusOK, list)
 	})
 
-	// Start Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	log.Printf("Server running on port %s", port)
-	_ = sbClient // avoid unused warning
+	fmt.Printf("Server running on port %s\n", port)
 	e.Logger.Fatal(e.Start(":" + port))
 }
