@@ -18,6 +18,7 @@ type AkunRepository interface {
 	ListProfiles(ctx context.Context, role string) ([]map[string]interface{}, error)
 	CreateProfile(ctx context.Context, payload models.CreateProfilePayload) (map[string]interface{}, error)
 	UpdateProfile(ctx context.Context, id string, payload models.UpdateProfilePayload) (map[string]interface{}, error)
+	UpdateSelfProfile(ctx context.Context, id string, payload models.SelfProfilePayload) (map[string]interface{}, error)
 	DeleteProfile(ctx context.Context, id string) (map[string]interface{}, error)
 	CreateAuthUser(ctx context.Context, payload models.CreateUserPayload) (map[string]interface{}, error)
 	UpdateProfileRole(ctx context.Context, id, role string) error
@@ -26,10 +27,10 @@ type AkunRepository interface {
 }
 
 type akunRepo struct {
-	db         *DB
+	db          *DB
 	supabaseURL string
-	serviceKey string
-	client     *http.Client
+	serviceKey  string
+	client      *http.Client
 }
 
 func NewAkunRepository(db *DB, supabaseURL, serviceKey string) AkunRepository {
@@ -43,7 +44,9 @@ func NewAkunRepository(db *DB, supabaseURL, serviceKey string) AkunRepository {
 
 func (r *akunRepo) GetProfile(ctx context.Context, id string) (map[string]interface{}, error) {
 	rows, err := r.db.List(ctx,
-		"SELECT id, nama_lengkap AS full_name, email, role, status, nip_nis, foto_profil, created_at FROM profiles WHERE id = $1", id)
+		`SELECT id, nama_lengkap AS full_name, email, role, status, nip_nis,
+			foto_profil, foto_profil AS avatar_url, hp, alamat, preferensi, created_at
+			FROM profiles WHERE id = $1`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +83,47 @@ func (r *akunRepo) UpdateProfile(ctx context.Context, id string, payload models.
 		return nil, err
 	}
 	return map[string]interface{}{"message": "profile updated"}, nil
+}
+
+// UpdateSelfProfile hanya mengubah field profil yang diizinkan untuk pengguna sendiri.
+func (r *akunRepo) UpdateSelfProfile(ctx context.Context, id string, payload models.SelfProfilePayload) (map[string]interface{}, error) {
+	sets := make([]string, 0, 5)
+	args := make([]interface{}, 0, 6)
+	add := func(column string, value interface{}) {
+		args = append(args, value)
+		sets = append(sets, fmt.Sprintf("%s = $%d", column, len(args)))
+	}
+
+	if payload.FullName != nil {
+		add("nama_lengkap", *payload.FullName)
+	}
+	if payload.HP != nil {
+		add("hp", *payload.HP)
+	}
+	if payload.Alamat != nil {
+		add("alamat", *payload.Alamat)
+	}
+	if payload.FotoProfil != nil {
+		add("foto_profil", *payload.FotoProfil)
+	}
+	if payload.Preferensi != nil {
+		raw, err := json.Marshal(*payload.Preferensi)
+		if err != nil {
+			return nil, err
+		}
+		add("preferensi", string(raw))
+		sets[len(sets)-1] += "::jsonb"
+	}
+	if len(sets) == 0 {
+		return nil, fmt.Errorf("tidak ada data yang diubah")
+	}
+
+	args = append(args, id)
+	query := "UPDATE profiles SET " + strings.Join(sets, ", ") + fmt.Sprintf(" WHERE id = $%d", len(args))
+	if err := r.db.Exec(ctx, query, args...); err != nil {
+		return nil, err
+	}
+	return r.GetProfile(ctx, id)
 }
 
 func (r *akunRepo) DeleteProfile(ctx context.Context, id string) (map[string]interface{}, error) {

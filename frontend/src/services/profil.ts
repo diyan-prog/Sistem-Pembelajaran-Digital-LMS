@@ -1,15 +1,15 @@
-import { supabase } from '@/lib/supabase';
+import { getMeGo, updateMeGo } from './api-go';
 
 export interface Profile {
   id: string;
   full_name: string;
-  role: string;
-  avatar_url?: string;
+  role: string | null;
+  avatar_url?: string | null;
   created_at?: string;
   email?: string;
-  hp?: string;
-  alamat?: string;
-  preferensi?: Record<string, unknown>;
+  hp?: string | null;
+  alamat?: string | null;
+  preferensi?: Record<string, unknown> | null;
   dusun_id?: string;
   nik?: string;
   tempat_lahir?: string;
@@ -23,30 +23,29 @@ export interface Profile {
 
 const ALLOWED_UPDATE_FIELDS = ['full_name', 'hp', 'alamat', 'preferensi'] as const;
 
-export const getProfile = async (id: string): Promise<Profile> => {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-  if (error) {
-    console.error('Get profile error:', error);
+/** getProfile mengambil profil pengguna yang sedang login dari backend Go. */
+export const getProfile = async (_id: string): Promise<Profile> => {
+  try {
+    return await getMeGo();
+  } catch {
     throw new Error('Gagal memuat profil');
   }
-  return data as Profile;
 };
 
-export const updateProfile = async (id: string, updates: Partial<Profile>): Promise<void> => {
-  const filtered: Record<string, any> = {};
+/** updateProfile mengubah data diri pengguna yang sedang login lewat backend Go. */
+export const updateProfile = async (_id: string, updates: Partial<Profile>): Promise<void> => {
+  const payload: Record<string, unknown> = {};
   for (const key of ALLOWED_UPDATE_FIELDS) {
-    if (key in updates && updates[key as keyof Profile] !== undefined) {
-      filtered[key] = updates[key as keyof Profile];
-    }
+    if (updates[key] !== undefined) payload[key] = updates[key];
   }
 
-  if (Object.keys(filtered).length === 0) {
+  if (Object.keys(payload).length === 0) {
     throw new Error('Tidak ada data yang diubah');
   }
 
-  const { error } = await supabase.from('profiles').update(filtered).eq('id', id);
-  if (error) {
-    console.error('Update profile error:', error);
-    throw new Error(error.message || 'Gagal menyimpan perubahan profil');
+  try {
+    await updateMeGo(payload);
+  } catch (err: any) {
+    throw new Error(err?.message || 'Gagal menyimpan perubahan profil');
   }
 };

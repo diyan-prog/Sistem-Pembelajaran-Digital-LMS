@@ -23,6 +23,16 @@ func (ctl *AkunController) Me(c echo.Context) error {
 	return write(c, c.Get("legacy") == true, http.StatusOK, data, nil, err)
 }
 
+func (ctl *AkunController) UpdateMe(c echo.Context) error {
+	var payload models.SelfProfilePayload
+	if err := c.Bind(&payload); err != nil {
+		return write(c, c.Get("legacy") == true, 0, nil, nil, bindError(err))
+	}
+	userID, _ := c.Get("user_id").(string)
+	data, err := ctl.svc.UpdateMe(c.Request().Context(), userID, payload)
+	return write(c, c.Get("legacy") == true, http.StatusOK, data, nil, err)
+}
+
 func (ctl *AkunController) GetProfile(c echo.Context) error {
 	data, err := ctl.svc.GetProfile(c.Request().Context(), c.Param("id"))
 	return write(c, c.Get("legacy") == true, http.StatusOK, data, nil, err)

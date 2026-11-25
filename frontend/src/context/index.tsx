@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { notifGuru, notifUmum, notifikasi } from '@/mocks'
 import { ROLES, toRole, type Role } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
+import { getMeGo } from '@/services/api-go'
 
 type ToastT = { id: number; msg: string; type: 'ok' | 'err' | 'info' | 'warn' }
 type ConfirmT = { title: string; message: string; okLabel?: string; danger?: boolean; onOk: () => void } | null
@@ -44,13 +45,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const handleSession = useCallback(async (session: any) => {
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+    let profile: any = null;
+    try {
+      profile = await getMeGo(session?.access_token);
+    } catch {
+      // Backend belum tersedia: pakai data minimal dari sesi Supabase Auth.
+    }
     if (profile) {
-      const dbRole = profile.role;
-      const r: Role = toRole(dbRole);
-      login(r, profile);
+      login(toRole(profile.role), profile);
     } else {
-      // Fallback if profile doesn't exist
       login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
     }
   }, []);
@@ -69,10 +72,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = () => { localStorage.removeItem('spd-role'); localStorage.removeItem('spd-user'); setRole(null); setUserData(null); supabase.auth.signOut(); }
   const refreshUser = useCallback(async () => {
     if (!userData?.id) return;
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userData.id).single();
-    if (profile) {
+    try {
+      const profile = await getMeGo();
       setUserData(profile);
       localStorage.setItem('spd-user', JSON.stringify(profile));
+    } catch {
+      // Biarkan data lokal apa adanya bila backend tidak merespons.
     }
   }, [userData?.id]);
   const toast = useCallback((msg: string, type: ToastT['type'] = 'ok') => {

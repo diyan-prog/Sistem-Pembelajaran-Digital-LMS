@@ -24,6 +24,9 @@ func (f *fakeAkunRepo) CreateProfile(ctx context.Context, p models.CreateProfile
 func (f *fakeAkunRepo) UpdateProfile(ctx context.Context, id string, p models.UpdateProfilePayload) (map[string]interface{}, error) {
 	return f.profile, f.err
 }
+func (f *fakeAkunRepo) UpdateSelfProfile(ctx context.Context, id string, p models.SelfProfilePayload) (map[string]interface{}, error) {
+	return f.profile, f.err
+}
 func (f *fakeAkunRepo) DeleteProfile(ctx context.Context, id string) (map[string]interface{}, error) {
 	return f.profile, f.err
 }
@@ -31,7 +34,9 @@ func (f *fakeAkunRepo) CreateAuthUser(ctx context.Context, p models.CreateUserPa
 	return f.profile, f.err
 }
 func (f *fakeAkunRepo) UpdateProfileRole(ctx context.Context, id, role string) error { return f.err }
-func (f *fakeAkunRepo) UpdateProfileStatus(ctx context.Context, id, status string) error { return f.err }
+func (f *fakeAkunRepo) UpdateProfileStatus(ctx context.Context, id, status string) error {
+	return f.err
+}
 func (f *fakeAkunRepo) ResetPassword(ctx context.Context, id, password string) error { return f.err }
 
 func TestAkunServiceGetProfile(t *testing.T) {

@@ -5,6 +5,7 @@ import { Logo } from '@/components/layouts';
 import { ROLES, toRole, homePath, type Role } from '@/lib/roles';
 import { useApp } from '@/context';
 import { supabase } from '@/lib/supabase';
+import { getMeGo } from '@/services/api-go';
 
 export function Login() {
   const { login } = useApp();
@@ -14,11 +15,15 @@ export function Login() {
     const handleAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        let profile: any = null;
+        try {
+          profile = await getMeGo(session.access_token);
+        } catch {
+          // Fallback ke data minimal bila backend belum merespons.
+        }
         let r: Role;
         if (profile) {
-          const dbRole = profile.role;
-          r = toRole(dbRole);
+          r = toRole(profile.role);
           localStorage.removeItem('spd-role');
           localStorage.removeItem('spd-user');
           login(r, profile);
@@ -57,12 +62,13 @@ export function Login() {
 
       if (authError || !authData.user) throw new Error('Username atau password salah');
 
-      // 2. Ambil profil lengkap agar role dan nama pengguna sinkron dengan context
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
+      // 2. Ambil profil lengkap dari backend Go agar role dan nama sinkron dengan context
+      let profile: any = null;
+      try {
+        profile = await getMeGo(authData.session?.access_token);
+      } catch {
+        // Fallback ke data minimal bila backend belum merespons.
+      }
 
       let r: Role;
       if (profile) {

@@ -12,6 +12,7 @@ type AkunRepository interface {
 	ListProfiles(ctx context.Context, role string) ([]map[string]interface{}, error)
 	CreateProfile(ctx context.Context, payload models.CreateProfilePayload) (map[string]interface{}, error)
 	UpdateProfile(ctx context.Context, id string, payload models.UpdateProfilePayload) (map[string]interface{}, error)
+	UpdateSelfProfile(ctx context.Context, id string, payload models.SelfProfilePayload) (map[string]interface{}, error)
 	DeleteProfile(ctx context.Context, id string) (map[string]interface{}, error)
 	CreateAuthUser(ctx context.Context, payload models.CreateUserPayload) (map[string]interface{}, error)
 	UpdateProfileRole(ctx context.Context, id, role string) error
@@ -42,12 +43,17 @@ func (s *AkunService) Me(ctx context.Context, id string) (map[string]interface{}
 	if profile == nil {
 		return nil, NotFound("profile tidak ditemukan")
 	}
-	return map[string]interface{}{
-		"id":    id,
-		"name":  profile["full_name"],
-		"email": profile["email"],
-		"role":  profile["role"],
-	}, nil
+	// name dipertahankan untuk klien lama; full_name dipakai frontend baru.
+	profile["id"] = id
+	profile["name"] = profile["full_name"]
+	return profile, nil
+}
+
+func (s *AkunService) UpdateMe(ctx context.Context, id string, payload models.SelfProfilePayload) (map[string]interface{}, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, Validation("user_id tidak ditemukan")
+	}
+	return s.repo.UpdateSelfProfile(ctx, id, payload)
 }
 
 func (s *AkunService) ListProfiles(ctx context.Context, role string) ([]map[string]interface{}, error) {

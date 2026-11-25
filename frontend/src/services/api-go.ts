@@ -15,7 +15,7 @@ const getHeaders = async (token?: string) => {
 };
 
 // request membungkus respons standar {success,data,error,meta} dan mengembalikan data.
-const request = async (path: string, options: RequestInit = {}, token?: string) => {
+const request = async <T = any>(path: string, options: RequestInit = {}, token?: string): Promise<T> => {
   const headers = await getHeaders(token);
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -26,8 +26,8 @@ const request = async (path: string, options: RequestInit = {}, token?: string) 
     const msg = body?.error?.message || body?.error || `Request gagal: ${res.status}`;
     throw new Error(msg);
   }
-  if (res.status === 204) return null;
-  return body?.data ?? body;
+  if (res.status === 204) return null as T;
+  return (body?.data ?? body) as T;
 };
 
 // ==================== HELPER CRUD ADMIN ====================
@@ -71,6 +71,24 @@ export interface ProfilGo {
 
 export const fetchProfilesGo = async (role?: string, token?: string): Promise<ProfilGo[]> =>
   adminGet<ProfilGo[]>(`profiles${role ? `?role=${encodeURIComponent(role)}` : ''}`, token);
+
+export interface MeGo extends ProfilGo {
+  avatar_url: string | null;
+  hp: string | null;
+  alamat: string | null;
+  preferensi: Record<string, unknown> | null;
+}
+
+export const getMeGo = async (token?: string): Promise<MeGo> => request<MeGo>('/me', {}, token);
+
+export const updateMeGo = async (data: Partial<{
+  full_name: string;
+  hp: string;
+  alamat: string;
+  foto_profil: string;
+  preferensi: Record<string, unknown>;
+}>, token?: string): Promise<MeGo> =>
+  request<MeGo>('/me', { method: 'PUT', body: JSON.stringify(data) }, token);
 
 // ==================== SISWA ====================
 export interface SiswaGo {

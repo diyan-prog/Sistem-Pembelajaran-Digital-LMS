@@ -25,6 +25,16 @@ type UpdateProfilePayload struct {
 	NipNis   string `json:"nip_nis"`
 }
 
+// SelfProfilePayload dipakai pengguna untuk mengubah data dirinya sendiri.
+// Field memakai pointer agar PUT /me bersifat partial update.
+type SelfProfilePayload struct {
+	FullName   *string                 `json:"full_name"`
+	HP         *string                 `json:"hp"`
+	Alamat     *string                 `json:"alamat"`
+	FotoProfil *string                 `json:"foto_profil"`
+	Preferensi *map[string]interface{} `json:"preferensi"`
+}
+
 // CreateUserPayload dipakai service role untuk membuat user Supabase Auth.
 // deprecated: Edge Function admin-users masih memakai bentuk yang sama.
 type CreateUserPayload struct {

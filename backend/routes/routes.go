@@ -24,11 +24,13 @@ func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController
 	v1 := e.Group("/api/v1")
 	v1.Use(apimw.Auth())
 	v1.GET("/me", akun.Me)
+	v1.PUT("/me", akun.UpdateMe)
 
 	legacy := e.Group("/api")
 	legacy.Use(apimw.Auth())
 	legacy.Use(markLegacy)
-	legacy.GET("/me", akun.Me) // deprecated: alias /api/v1/me
+	legacy.GET("/me", akun.Me)       // deprecated: alias /api/v1/me
+	legacy.PUT("/me", akun.UpdateMe) // deprecated: alias /api/v1/me
 
 	registerProfiles(v1.Group("/admin"), legacy.Group("/admin"), akun)
 
