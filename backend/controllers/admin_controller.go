@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
 	"classin/api/models"
 	"classin/api/services"
+	"classin/api/views"
 )
 
 type AdminController struct {
@@ -145,4 +147,20 @@ func (ctl *AdminController) Delete(resource string) echo.HandlerFunc {
 		data, err := ctl.svc.Delete(c.Request().Context(), resource, c.Param("id"))
 		return write(c, legacy(c), http.StatusOK, data, nil, err)
 	}
+}
+
+// SiswaPengampu mengembalikan pengampu untuk satu siswa.
+func (ctl *AdminController) SiswaPengampu(c echo.Context) error {
+	userID, _ := c.Get("user_id").(string)
+	role, _ := c.Get("role").(string)
+	if c.Param("id") != userID && !isAdminRole(role) {
+		return views.Fail(c, http.StatusForbidden, "forbidden", "tidak diizinkan mengakses data siswa lain")
+	}
+	data, err := ctl.svc.SiswaPengampu(c.Request().Context(), c.Param("id"))
+	return write(c, legacy(c), http.StatusOK, data, nil, err)
+}
+
+func isAdminRole(role string) bool {
+	s := strings.ToLower(strings.ReplaceAll(role, "_", "-"))
+	return strings.Contains(s, "admin") || s == "tu" || s == "tata-usaha" || strings.Contains(s, "kepala") || strings.Contains(s, "wali") || strings.Contains(s, "guru")
 }

@@ -3,10 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type AdminRepository interface {
 	Dashboard(ctx context.Context) (map[string]int, error)
+	SiswaPengampu(ctx context.Context, id string) ([]map[string]interface{}, error)
 	List(ctx context.Context, resource, filter string) ([]map[string]interface{}, error)
 	Create(ctx context.Context, resource string, payload interface{}) (map[string]interface{}, error)
 	Update(ctx context.Context, resource, id string, payload interface{}) (map[string]interface{}, error)
@@ -40,6 +42,13 @@ func checkResource(resource string) error {
 
 func (s *AdminService) Dashboard(ctx context.Context) (map[string]int, error) {
 	return s.repo.Dashboard(ctx)
+}
+
+func (s *AdminService) SiswaPengampu(ctx context.Context, id string) ([]map[string]interface{}, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, Validation("id siswa wajib diisi")
+	}
+	return s.repo.SiswaPengampu(ctx, id)
 }
 
 func (s *AdminService) List(ctx context.Context, resource, filter string) ([]map[string]interface{}, error) {

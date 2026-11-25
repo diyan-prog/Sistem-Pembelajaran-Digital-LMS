@@ -5,7 +5,7 @@ import { Badge, Card, CardTitle, Empty, cn } from '@/components/ui'
 import { useApp } from '@/context'
 import { supabase } from '@/lib/supabase'
 import { fmtTglPendek, siswaOfferings } from '@/mocks'
-import { fetchPengumumanGo } from '@/services/api-go';
+import { adminList, fetchPengumumanGo } from '@/services/api-go';
 import { fetchSiswaClassesGo } from '@/services/siswa';
 import { fromPengampuToOffering } from '@/services/akademik'
 import { ClassBrowser, ScheduleCard } from '@/pages/shared'
@@ -20,13 +20,13 @@ export function PerluDikerjakan({ limit }: { limit?: number }) {
     if (!userData?.id) return
     try {
       const [ts, ks] = await Promise.all([
-        supabase.from('tugas').select('*, pengampu(subjects(name))'),
-        supabase.from('kuis').select('*, pengampu(subjects(name))')
+        adminList<any>('tugas'),
+        adminList<any>('kuis')
       ])
-      
+
       const all = [
-        ...(ts.data || []).map(t => ({ k: 'tugas', id: t.id_tugas, judul: t.judul, off: t.id_pengampu, batas: t.deadline, mapel: t.pengampu?.subjects?.name })),
-        ...(ks.data || []).map(k => ({ k: 'kuis', id: k.id_kuis, judul: k.judul, off: k.id_pengampu, batas: k.waktu_selesai, mapel: k.pengampu?.subjects?.name }))
+        ...(ts || []).map(t => ({ k: 'tugas', id: t.id_tugas, judul: t.judul, off: t.id_pengampu, batas: t.deadline, mapel: t.pengampu?.subjects?.name })),
+        ...(ks || []).map(k => ({ k: 'kuis', id: k.id_kuis, judul: k.judul, off: k.id_pengampu, batas: k.waktu_selesai, mapel: k.pengampu?.subjects?.name }))
       ].sort((a, b) => a.batas.localeCompare(b.batas))
       
       setItems(all)

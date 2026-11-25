@@ -34,6 +34,9 @@ func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController
 
 	registerProfiles(v1.Group("/admin"), legacy.Group("/admin"), akun)
 
+	v1.GET("/siswa/:id/pengampu", admin.SiswaPengampu)
+	legacy.GET("/siswa/:id/pengampu", admin.SiswaPengampu) // deprecated: alias /api/v1/siswa/:id/pengampu
+
 	adminV1 := v1.Group("/admin", apimw.RequireRole(legacyAdminRoles...))
 	adminLegacy := legacy.Group("/admin", apimw.RequireRole(legacyAdminRoles...))
 	registerDashboard(adminV1, adminLegacy, admin)

@@ -18,6 +18,7 @@ func jsonValue(v interface{}) interface{} {
 
 type AdminRepository interface {
 	Dashboard(ctx context.Context) (map[string]int, error)
+	SiswaPengampu(ctx context.Context, id string) ([]map[string]interface{}, error)
 	List(ctx context.Context, resource, filter string) ([]map[string]interface{}, error)
 	Create(ctx context.Context, resource string, payload interface{}) (map[string]interface{}, error)
 	Update(ctx context.Context, resource, id string, payload interface{}) (map[string]interface{}, error)
@@ -178,7 +179,11 @@ var specs = map[string]resourceSpec{
 		createMsg: "presensi created", updateMsg: "presensi updated", deleteMsg: "presensi deleted",
 	},
 	"tugas": {
-		list:      "SELECT t.id_tugas, t.id_pengampu, t.judul, t.deskripsi, t.file_lampiran, t.deadline, t.created_at FROM tugas t",
+		list: `SELECT t.id_tugas, t.id_pengampu, t.judul, t.deskripsi, t.file_lampiran, t.deadline, t.created_at,
+			json_build_object('subjects', json_build_object('name', s.name)) AS pengampu
+			FROM tugas t
+			LEFT JOIN pengampu p ON t.id_pengampu = p.id_pengampu
+			LEFT JOIN subjects s ON p.id_mapel = s.id`,
 		filterCol: "t.deadline",
 		insert:    "INSERT INTO tugas (id_pengampu, judul, deskripsi, file_lampiran, deadline) VALUES ($1, $2, $3, $4, $5)",
 		update:    "UPDATE tugas SET id_pengampu = $1, judul = $2, deskripsi = $3, file_lampiran = $4, deadline = $5 WHERE id_tugas = $6",
@@ -210,8 +215,12 @@ var specs = map[string]resourceSpec{
 		createMsg: "pengumpulan created", updateMsg: "pengumpulan updated", deleteMsg: "pengumpulan deleted",
 	},
 	"kuis": {
-		list:      "SELECT id_kuis, id_pengampu, judul, durasi_menit, status, waktu_mulai, waktu_selesai, created_at FROM kuis",
-		filterCol: "status",
+		list: `SELECT k.id_kuis, k.id_pengampu, k.judul, k.durasi_menit, k.status, k.waktu_mulai, k.waktu_selesai, k.created_at,
+			json_build_object('subjects', json_build_object('name', s.name)) AS pengampu
+			FROM kuis k
+			LEFT JOIN pengampu p ON k.id_pengampu = p.id_pengampu
+			LEFT JOIN subjects s ON p.id_mapel = s.id`,
+		filterCol: "k.status",
 		insert:    "INSERT INTO kuis (id_pengampu, judul, durasi_menit, status, waktu_mulai, waktu_selesai) VALUES ($1, $2, $3, $4, $5, $6)",
 		update:    "UPDATE kuis SET id_pengampu = $1, judul = $2, durasi_menit = $3, status = $4, waktu_mulai = $5, waktu_selesai = $6 WHERE id_kuis = $7",
 		remove:    "DELETE FROM kuis WHERE id_kuis = $1",
@@ -394,6 +403,19 @@ func (r *adminRepo) Dashboard(ctx context.Context) (map[string]int, error) {
 		"total_siswa":    totalSiswa,
 		"total_guru":     totalGuru,
 	}, nil
+}
+
+func (r *adminRepo) SiswaPengampu(ctx context.Context, id string) ([]map[string]interface{}, error) {
+	return r.db.List(ctx,
+		`SELECT p.id_pengampu, p.id_guru, p.id_mapel, p.id_kelas, p.tahun_ajaran,
+			s.name AS mapel_name, s.code AS mapel_code,
+			pr.nama_lengkap AS guru_name, c.name AS kelas_name
+			FROM siswa sw
+			JOIN pengampu p ON sw.kelas_id = p.id_kelas
+			LEFT JOIN subjects s ON p.id_mapel = s.id
+			LEFT JOIN profiles pr ON p.id_guru = pr.id
+			LEFT JOIN classes c ON p.id_kelas = c.id
+			WHERE sw.id = $1`, id)
 }
 
 func (r *adminRepo) List(ctx context.Context, resource, filter string) ([]map[string]interface{}, error) {
