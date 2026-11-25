@@ -2,10 +2,19 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"classin/api/models"
 )
+
+func jsonValue(v interface{}) interface{} {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	return string(raw)
+}
 
 type AdminRepository interface {
 	Dashboard(ctx context.Context) (map[string]int, error)
@@ -126,13 +135,13 @@ var specs = map[string]resourceSpec{
 		createMsg: "jadwal created", updateMsg: "jadwal updated", deleteMsg: "jadwal deleted",
 	},
 	"log": {
-		list:      "SELECT id, user_id, aksi, modul, entitas, entitas_id, detail, created_at FROM activity_log",
-		filterCol: "modul",
-		insert:    "INSERT INTO activity_log (user_id, aksi, modul, entitas, entitas_id, detail) VALUES ($1, $2, $3, $4, $5, $6::jsonb)",
+		list:      "SELECT l.id, l.user_id, COALESCE(p.nama_lengkap, 'Sistem') AS user, COALESCE(p.role, '-') AS role, l.aksi, l.modul, l.entitas, l.ip_address, l.created_at AS waktu FROM activity_log l LEFT JOIN profiles p ON l.user_id = p.id",
+		filterCol: "l.modul",
+		insert:    "INSERT INTO activity_log (user_id, aksi, modul, entitas, entitas_id, detail, ip_address) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)",
 		remove:    "DELETE FROM activity_log WHERE id = $1",
 		insertArgs: func(p interface{}) []interface{} {
 			v := p.(models.LogPayload)
-			return []interface{}{nullable(v.UserID), v.Aksi, nullable(v.Modul), nullable(v.Entitas), nullable(v.EntitasID), nullable(v.Detail)}
+			return []interface{}{nullable(v.UserID), v.Aksi, nullable(v.Modul), nullable(v.Entitas), nullable(v.EntitasID), nullable(v.Detail), nullable(v.IPAddress)}
 		},
 		createMsg: "activity logged", deleteMsg: "activity deleted",
 	},
@@ -235,16 +244,16 @@ var specs = map[string]resourceSpec{
 	"pengaturan": {
 		list:      "SELECT key, value, updated_at FROM pengaturan",
 		filterCol: "key",
-		insert:    "INSERT INTO pengaturan (key, value) VALUES ($1, $2)",
-		update:    "UPDATE pengaturan SET value = $2 WHERE key = $1",
+		insert:    "INSERT INTO pengaturan (key, value) VALUES ($1, $2::jsonb)",
+		update:    "UPDATE pengaturan SET value = $2::jsonb WHERE key = $1",
 		remove:    "DELETE FROM pengaturan WHERE key = $1",
 		insertArgs: func(p interface{}) []interface{} {
 			v := p.(models.PengaturanPayload)
-			return []interface{}{v.Key, v.Value}
+			return []interface{}{v.Key, jsonValue(v.Value)}
 		},
 		updateArgs: func(p interface{}, id string) []interface{} {
 			v := p.(models.PengaturanPayload)
-			return []interface{}{id, v.Value}
+			return []interface{}{id, jsonValue(v.Value)}
 		},
 		createMsg: "pengaturan created", updateMsg: "pengaturan updated", deleteMsg: "pengaturan deleted",
 	},

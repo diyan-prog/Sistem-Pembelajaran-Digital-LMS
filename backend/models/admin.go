@@ -65,6 +65,7 @@ type LogPayload struct {
 	Entitas   string `json:"entitas"`
 	EntitasID string `json:"entitas_id"`
 	Detail    string `json:"detail"`
+	IPAddress string `json:"ip_address"`
 }
 
 type PengumumanPayload struct {
