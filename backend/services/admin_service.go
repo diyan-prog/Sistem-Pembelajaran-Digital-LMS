@@ -27,6 +27,8 @@ var allowedResources = map[string]bool{
 	"pengumuman": true, "presensi": true,
 	"tugas": true, "pengumpulan_tugas": true, "kuis": true,
 	"tahun_ajaran": true, "pengaturan": true,
+	"materi": true, "pertemuan": true, "soal_kuis": true,
+	"hasil_kuis": true, "notifikasi": true, "pengampu": true,
 }
 
 func checkResource(resource string) error {

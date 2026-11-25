@@ -89,6 +89,30 @@ func bindPayload(c echo.Context, resource string) (interface{}, error) {
 		var p models.PengaturanPayload
 		err := c.Bind(&p)
 		return p, err
+	case "materi":
+		var p models.MateriPayload
+		err := c.Bind(&p)
+		return p, err
+	case "pertemuan":
+		var p models.PertemuanPayload
+		err := c.Bind(&p)
+		return p, err
+	case "soal_kuis":
+		var p models.SoalKuisPayload
+		err := c.Bind(&p)
+		return p, err
+	case "hasil_kuis":
+		var p models.HasilKuisPayload
+		err := c.Bind(&p)
+		return p, err
+	case "notifikasi":
+		var p models.NotifikasiPayload
+		err := c.Bind(&p)
+		return p, err
+	case "pengampu":
+		var p models.PengampuPayload
+		err := c.Bind(&p)
+		return p, err
 	default:
 		return nil, services.Validation("resource tidak dikenal")
 	}

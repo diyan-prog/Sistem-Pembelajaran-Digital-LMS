@@ -125,6 +125,57 @@ type PengaturanPayload struct {
 	Value interface{} `json:"value"`
 }
 
+type MateriPayload struct {
+	IdPengampu   string `json:"id_pengampu"`
+	Judul        string `json:"judul"`
+	Deskripsi    string `json:"deskripsi"`
+	FileMateri   string `json:"file_materi"`
+	LinkVideo    string `json:"link_video"`
+	TanggalUpload string `json:"tanggal_upload"`
+}
+
+type PertemuanPayload struct {
+	IdPengampu  string `json:"id_pengampu"`
+	NoPertemuan int    `json:"no_pertemuan"`
+	Judul       string `json:"judul"`
+	Tanggal     string `json:"tanggal"`
+}
+
+type SoalKuisPayload struct {
+	IdKuis       string `json:"id_kuis"`
+	Pertanyaan   string `json:"pertanyaan"`
+	PilihanA     string `json:"pilihan_a"`
+	PilihanB     string `json:"pilihan_b"`
+	PilihanC     string `json:"pilihan_c"`
+	PilihanD     string `json:"pilihan_d"`
+	KunciJawaban string `json:"kunci_jawaban"`
+	Poin         int    `json:"poin"`
+	Urutan       *int   `json:"urutan"`
+}
+
+type HasilKuisPayload struct {
+	IdKuis       string `json:"id_kuis"`
+	IdSiswa      string `json:"id_siswa"`
+	Nilai        int    `json:"nilai"`
+	WaktuMulai   string `json:"waktu_mulai"`
+	WaktuSelesai string `json:"waktu_selesai"`
+}
+
+type NotifikasiPayload struct {
+	UserID string `json:"user_id"`
+	Judul  string `json:"judul"`
+	Isi    string `json:"isi"`
+	Jenis  string `json:"jenis"`
+	Link   string `json:"link"`
+}
+
+type PengampuPayload struct {
+	IdGuru      string `json:"id_guru"`
+	IdKelas     string `json:"id_kelas"`
+	IdMapel     string `json:"id_mapel"`
+	TahunAjaran string `json:"tahun_ajaran"`
+}
+
 type AdminMessage struct {
 	Message string `json:"message"`
 }

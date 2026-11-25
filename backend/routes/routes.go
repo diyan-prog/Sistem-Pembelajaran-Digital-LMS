@@ -74,6 +74,8 @@ func registerCRUD(v1, legacy *echo.Group, admin *controllers.AdminController) {
 		{"pengumuman", false}, {"presensi", false},
 		{"tugas", false}, {"pengumpulan_tugas", false}, {"kuis", false},
 		{"tahun_ajaran", false}, {"pengaturan", false},
+		{"materi", false}, {"pertemuan", false}, {"soal_kuis", false},
+		{"hasil_kuis", false}, {"notifikasi", false}, {"pengampu", false},
 	}
 	for _, resource := range resources {
 		rv1 := v1.Group("/" + resource.name)

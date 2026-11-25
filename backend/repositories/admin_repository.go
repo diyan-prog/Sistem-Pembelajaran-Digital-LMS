@@ -248,6 +248,102 @@ var specs = map[string]resourceSpec{
 		},
 		createMsg: "pengaturan created", updateMsg: "pengaturan updated", deleteMsg: "pengaturan deleted",
 	},
+	"materi": {
+		list:      "SELECT id_materi, id_pengampu, judul, deskripsi, file_materi, link_video, tanggal_upload FROM materi",
+		filterCol: "id_pengampu",
+		insert:    "INSERT INTO materi (id_pengampu, judul, deskripsi, file_materi, link_video) VALUES ($1, $2, $3, $4, $5)",
+		update:    "UPDATE materi SET id_pengampu = $1, judul = $2, deskripsi = $3, file_materi = $4, link_video = $5 WHERE id_materi = $6",
+		remove:    "DELETE FROM materi WHERE id_materi = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.MateriPayload)
+			return []interface{}{v.IdPengampu, v.Judul, v.Deskripsi, nullable(v.FileMateri), nullable(v.LinkVideo)}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.MateriPayload)
+			return []interface{}{v.IdPengampu, v.Judul, v.Deskripsi, nullable(v.FileMateri), nullable(v.LinkVideo), id}
+		},
+		createMsg: "materi created", updateMsg: "materi updated", deleteMsg: "materi deleted",
+	},
+	"pertemuan": {
+		list:      "SELECT id_pertemuan, id_pengampu, no_pertemuan, judul, tanggal FROM pertemuan",
+		filterCol: "id_pengampu",
+		insert:    "INSERT INTO pertemuan (id_pengampu, no_pertemuan, judul, tanggal) VALUES ($1, $2, $3, $4)",
+		update:    "UPDATE pertemuan SET id_pengampu = $1, no_pertemuan = $2, judul = $3, tanggal = $4 WHERE id_pertemuan = $5",
+		remove:    "DELETE FROM pertemuan WHERE id_pertemuan = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.PertemuanPayload)
+			return []interface{}{nullable(v.IdPengampu), v.NoPertemuan, v.Judul, nullable(v.Tanggal)}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.PertemuanPayload)
+			return []interface{}{nullable(v.IdPengampu), v.NoPertemuan, v.Judul, nullable(v.Tanggal), id}
+		},
+		createMsg: "pertemuan created", updateMsg: "pertemuan updated", deleteMsg: "pertemuan deleted",
+	},
+	"soal_kuis": {
+		list:      "SELECT id_soal, id_kuis, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, kunci_jawaban, poin, urutan FROM soal_kuis",
+		filterCol: "id_kuis",
+		insert:    "INSERT INTO soal_kuis (id_kuis, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, kunci_jawaban, poin, urutan) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+		update:    "UPDATE soal_kuis SET id_kuis = $1, pertanyaan = $2, pilihan_a = $3, pilihan_b = $4, pilihan_c = $5, pilihan_d = $6, kunci_jawaban = $7, poin = $8, urutan = $9 WHERE id_soal = $10",
+		remove:    "DELETE FROM soal_kuis WHERE id_soal = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.SoalKuisPayload)
+			return []interface{}{v.IdKuis, v.Pertanyaan, v.PilihanA, v.PilihanB, v.PilihanC, v.PilihanD, v.KunciJawaban, v.Poin, v.Urutan}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.SoalKuisPayload)
+			return []interface{}{v.IdKuis, v.Pertanyaan, v.PilihanA, v.PilihanB, v.PilihanC, v.PilihanD, v.KunciJawaban, v.Poin, v.Urutan, id}
+		},
+		createMsg: "soal created", updateMsg: "soal updated", deleteMsg: "soal deleted",
+	},
+	"hasil_kuis": {
+		list:      "SELECT id_hasil, id_kuis, id_siswa, nilai, waktu_mulai, waktu_selesai FROM hasil_kuis",
+		filterCol: "id_kuis",
+		insert:    "INSERT INTO hasil_kuis (id_kuis, id_siswa, nilai, waktu_mulai, waktu_selesai) VALUES ($1, $2, $3, $4, $5)",
+		update:    "UPDATE hasil_kuis SET id_kuis = $1, id_siswa = $2, nilai = $3, waktu_mulai = $4, waktu_selesai = $5 WHERE id_hasil = $6",
+		remove:    "DELETE FROM hasil_kuis WHERE id_hasil = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.HasilKuisPayload)
+			return []interface{}{v.IdKuis, v.IdSiswa, v.Nilai, v.WaktuMulai, v.WaktuSelesai}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.HasilKuisPayload)
+			return []interface{}{v.IdKuis, v.IdSiswa, v.Nilai, v.WaktuMulai, v.WaktuSelesai, id}
+		},
+		createMsg: "hasil kuis created", updateMsg: "hasil kuis updated", deleteMsg: "hasil kuis deleted",
+	},
+	"notifikasi": {
+		list:      "SELECT id, user_id, judul, isi, jenis, link, is_read, created_at FROM notifikasi",
+		filterCol: "user_id",
+		insert:    "INSERT INTO notifikasi (user_id, judul, isi, jenis, link) VALUES ($1, $2, $3, $4, $5)",
+		update:    "UPDATE notifikasi SET user_id = $1, judul = $2, isi = $3, jenis = $4, link = $5 WHERE id = $6",
+		remove:    "DELETE FROM notifikasi WHERE id = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.NotifikasiPayload)
+			return []interface{}{nullable(v.UserID), v.Judul, nullable(v.Isi), nullable(v.Jenis), nullable(v.Link)}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.NotifikasiPayload)
+			return []interface{}{nullable(v.UserID), v.Judul, nullable(v.Isi), nullable(v.Jenis), nullable(v.Link), id}
+		},
+		createMsg: "notifikasi created", updateMsg: "notifikasi updated", deleteMsg: "notifikasi deleted",
+	},
+	"pengampu": {
+		list:      "SELECT id_pengampu, id_guru, id_kelas, id_mapel, tahun_ajaran FROM pengampu",
+		filterCol: "tahun_ajaran",
+		insert:    "INSERT INTO pengampu (id_guru, id_kelas, id_mapel, tahun_ajaran) VALUES ($1, $2, $3, $4)",
+		update:    "UPDATE pengampu SET id_guru = $1, id_kelas = $2, id_mapel = $3, tahun_ajaran = $4 WHERE id_pengampu = $5",
+		remove:    "DELETE FROM pengampu WHERE id_pengampu = $1",
+		insertArgs: func(p interface{}) []interface{} {
+			v := p.(models.PengampuPayload)
+			return []interface{}{v.IdGuru, v.IdKelas, v.IdMapel, v.TahunAjaran}
+		},
+		updateArgs: func(p interface{}, id string) []interface{} {
+			v := p.(models.PengampuPayload)
+			return []interface{}{v.IdGuru, v.IdKelas, v.IdMapel, v.TahunAjaran, id}
+		},
+		createMsg: "pengampu created", updateMsg: "pengampu updated", deleteMsg: "pengampu deleted",
+	},
 }
 
 type adminRepo struct{ db *DB }
