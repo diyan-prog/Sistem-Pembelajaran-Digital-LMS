@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/layouts';
-import { ROLES, toRole, homePath } from '@/lib/roles';
+import { ROLES, toRole, homePath, type Role } from '@/lib/roles';
 import { useApp } from '@/context';
 import { supabase } from '@/lib/supabase';
 
@@ -15,9 +15,16 @@ export function Login() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      const r: Role = toRole(profile?.role);
-      login(r, profile);
-      nav(homePath(r));
+        let r: Role;
+        if (profile) {
+          const dbRole = profile.role;
+          r = toRole(dbRole);
+          login(r, profile);
+          nav(homePath(r));
+        } else {
+          login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
+          nav(homePath('tu'));
+        }
       }
     };
     handleAuth();

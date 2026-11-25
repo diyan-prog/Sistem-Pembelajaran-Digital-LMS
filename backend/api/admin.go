@@ -2,34 +2,27 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/supabase-community/supabase-go"
 )
 
 // Role-based middleware
 type RoleKey string
 
 const (
-	RoleAdminAll   RoleKey = "admin_all"
-	RoleAdmin      RoleKey = "admin"
-	RoleTu         RoleKey = "tu"
-	RoleKepsek     RoleKey = "kepsek"
+	RoleAdminAll RoleKey = "admin_all"
+	RoleAdmin    RoleKey = "admin"
+	RoleTu       RoleKey = "tu"
+	RoleKepsek   RoleKey = "kepsek"
 	RoleAdminAllAll RoleKey = "admin_all_all"
 )
 
 func RoleMiddleware(allowed ...RoleKey) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Get role from JWT token (assume "role" claim)
 			roleClaim, ok := c.Get("role").(string)
 			if !ok {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing role claim"})
@@ -41,7 +34,6 @@ func RoleMiddleware(allowed ...RoleKey) echo.MiddlewareFunc {
 			}
 			return c.JSON(http.StatusForbidden, map[string]string{"error": "forbidden"})
 		}
-	}
 	}
 }
 
@@ -59,10 +51,12 @@ func dbRoleFromClaim(ok bool, dbRole string) string {
 func GetAdminProfiles(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT id, full_name, email, role, status, nip_nis FROM profiles"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -70,11 +64,18 @@ func GetAdminProfiles(c echo.Context) error {
 
 	var profiles []map[string]interface{}
 	for rows.Next() {
-		var p map[string]interface{}
-		if err := rows.Scan(&p["id"], &p["full_name"], &p["email"], &p["role"], &p["status"], &p["nip_nis"]); err != nil {
+		var id, fullName, email, role, status, nipNis string
+		if err := rows.Scan(&id, &fullName, &email, &role, &status, &nipNis); err != nil {
 			continue
 		}
-		profiles = append(profiles, p)
+		profiles = append(profiles, map[string]interface{}{
+			"id":       id,
+			"full_name": fullName,
+			"email":    email,
+			"role":     role,
+			"status":   status,
+			"nip_nis":  nipNis,
+		})
 	}
 	return c.JSON(http.StatusOK, profiles)
 }
@@ -82,18 +83,18 @@ func GetAdminProfiles(c echo.Context) error {
 // POST /admin/profiles -> create profile
 func CreateAdminProfile(c echo.Context) error {
 	var payload struct {
-		full_name string `json:"full_name"`
-		email     string `json:"email"`
-		role      string `json:"role"`
-		status    string `json:"status"`
-		nip_nis   string `json:"nip_nis"`
+		FullName string `json:"full_name"`
+		Email    string `json:"email"`
+		Role     string `json:"role"`
+		Status   string `json:"status"`
+		NipNis   string `json:"nip_nis"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO profiles (full_name, email, role, status, nip_nis) VALUES ($1, $2, $3, $4, $5)",
-		payload.full_name, payload.email, payload.role, payload.status, payload.nip_nis)
+		payload.FullName, payload.Email, payload.Role, payload.Status, payload.NipNis)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -104,18 +105,18 @@ func CreateAdminProfile(c echo.Context) error {
 func UpdateAdminProfile(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		full_name string `json:"full_name"`
-		email     string `json:"email"`
-		role      string `json:"role"`
-		status    string `json:"status"`
-		nip_nis   string `json:"nip_nis"`
+		FullName string `json:"full_name"`
+		Email    string `json:"email"`
+		Role     string `json:"role"`
+		Status   string `json:"status"`
+		NipNis   string `json:"nip_nis"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"UPDATE profiles SET full_name = $1, email = $2, role = $3, status = $4, nip_nis = $5 WHERE id = $6",
-		payload.full_name, payload.email, payload.role, payload.status, payload.nip_nis, id)
+		payload.FullName, payload.Email, payload.Role, payload.Status, payload.NipNis, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -135,11 +136,13 @@ func DeleteAdminProfile(c echo.Context) error {
 // GET /admin/classes -> list classes with jurusan
 func GetAdminClasses(c echo.Context) error {
 	role := c.QueryParam("role")
-	query := "SELECT id, name, grade, major, tingkat, jurusan_id, jurusan_name FROM classes"
+	query := "SELECT id, name, grade, major, tingkat, jurusan_id FROM classes"
+	var args []interface{}
 	if role != "" {
-		query += " WHERE role = $1"
+		query += " WHERE major = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -147,11 +150,19 @@ func GetAdminClasses(c echo.Context) error {
 
 	var classes []map[string]interface{}
 	for rows.Next() {
-		var cl map[string]interface{}
-		if err := rows.Scan(&cl["id"], &cl["name"], &cl["grade"], &cl["major"], &cl["tingkat"], &cl["jurusan_id"], &cl["jurusan_name"]); err != nil {
+		var id, name, major, jurusanID string
+		var grade, tingkat int
+		if err := rows.Scan(&id, &name, &grade, &major, &tingkat, &jurusanID); err != nil {
 			continue
 		}
-		classes = append(classes, cl)
+		classes = append(classes, map[string]interface{}{
+			"id":         id,
+			"name":       name,
+			"grade":      grade,
+			"major":      major,
+			"tingkat":    tingkat,
+			"jurusan_id": jurusanID,
+		})
 	}
 	return c.JSON(http.StatusOK, classes)
 }
@@ -159,18 +170,18 @@ func GetAdminClasses(c echo.Context) error {
 // POST /admin/classes -> create class
 func CreateAdminClass(c echo.Context) error {
 	var payload struct {
-		name      string `json:"name"`
-		grade     int    `json:"grade"`
-		major     string `json:"major"`
-		tingkat   int    `json:"tingkat"`
-		jurusan_id string `json:"jurusan_id"`
+		Name       string `json:"name"`
+		Grade      int    `json:"grade"`
+		Major      string `json:"major"`
+		Tingkat    int    `json:"tingkat"`
+		JurusanID  string `json:"jurusan_id"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO classes (name, grade, major, tingkat, jurusan_id) VALUES ($1, $2, $3, $4, $5)",
-		payload.name, payload.grade, payload.major, payload.tingkat, payload.jurusan_id)
+		payload.Name, payload.Grade, payload.Major, payload.Tingkat, payload.JurusanID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -181,19 +192,19 @@ func CreateAdminClass(c echo.Context) error {
 func UpdateAdminClass(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		name      string `json:"name"`
-		grade     int    `json:"grade"`
-		major     string `json:"major"`
-		tingkat   int    `json:"tingkat"`
-		jurusan_id string `json:"jurusan_id"`
+		Name      string `json:"name"`
+		Grade     int    `json:"grade"`
+		Major     string `json:"major"`
+		Tingkat   int    `json:"tingkat"`
+		JurusanID string `json:"jurusan_id"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"UPDATE classes SET name = $1, grade = $2, major = $3, tingkat = $4, jurusan_id = $5 WHERE id = $6",
-		payload.name, payload.grade, payload.major, payload.tingkat, payload.jurusan_id, id)
-	if err != nil {
+		payload.Name, payload.Grade, payload.Major, payload.Tingkat, payload.JurusanID, id)
+		if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "class updated"})
@@ -213,10 +224,12 @@ func DeleteAdminClass(c echo.Context) error {
 func GetAdminJurusan(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT id, nama, kode FROM jurusan"
+	var args []interface{}
 	if role != "" {
-		query += " WHERE role = $1"
+		query += " WHERE kode = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -224,11 +237,15 @@ func GetAdminJurusan(c echo.Context) error {
 
 	var jurusan []map[string]interface{}
 	for rows.Next() {
-		var j map[string]interface{}
-		if err := rows.Scan(&j["id"], &j["nama"], &j["kode"]); err != nil {
+		var id, nama, kode string
+		if err := rows.Scan(&id, &nama, &kode); err != nil {
 			continue
 		}
-		jurusan = append(jurusan, j)
+		jurusan = append(jurusan, map[string]interface{}{
+			"id":   id,
+			"nama": nama,
+			"kode": kode,
+		})
 	}
 	return c.JSON(http.StatusOK, jurusan)
 }
@@ -236,16 +253,16 @@ func GetAdminJurusan(c echo.Context) error {
 // POST /admin/jurusan -> create jurusan
 func CreateAdminJurusan(c echo.Context) error {
 	var payload struct {
-		nama  string `json:"nama"`
-		kode  string `json:"kode"`
-		role  string `json:"role"`
+		Nama  string `json:"nama"`
+		Kode  string `json:"kode"`
+		Role  string `json:"role"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO jurusan (nama, kode, role) VALUES ($1, $2, $3)",
-		payload.nama, payload.kode, payload.role)
+		payload.Nama, payload.Kode, payload.Role)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -256,16 +273,16 @@ func CreateAdminJurusan(c echo.Context) error {
 func UpdateAdminJurusan(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		nama  string `json:"nama"`
-		kode  string `json:"kode"`
-		role  string `json:"role"`
+		Nama  string `json:"nama"`
+		Kode  string `json:"kode"`
+		Role  string `json:"role"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"UPDATE jurusan SET nama = $1, kode = $2, role = $3 WHERE id = $4",
-		payload.nama, payload.kode, payload.role, id)
+		payload.Nama, payload.Kode, payload.Role, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -286,10 +303,12 @@ func DeleteAdminJurusan(c echo.Context) error {
 func GetAdminMapel(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT id_mapel, kode_mapel, nama_mapel, teacher_name FROM mapel"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -297,11 +316,16 @@ func GetAdminMapel(c echo.Context) error {
 
 	var mapel []map[string]interface{}
 	for rows.Next() {
-		var m map[string]interface{}
-		if err := rows.Scan(&m["id_mapel"], &m["kode_mapel"], &m["nama_mapel"], &m["teacher_name"]); err != nil {
+		var idMapel, kodeMapel, namaMapel, teacherName string
+		if err := rows.Scan(&idMapel, &kodeMapel, &namaMapel, &teacherName); err != nil {
 			continue
 		}
-		mapel = append(mapel, m)
+		mapel = append(mapel, map[string]interface{}{
+			"id_mapel":     idMapel,
+			"kode_mapel":   kodeMapel,
+			"nama_mapel":   namaMapel,
+			"teacher_name": teacherName,
+		})
 	}
 	return c.JSON(http.StatusOK, mapel)
 }
@@ -309,16 +333,16 @@ func GetAdminMapel(c echo.Context) error {
 // POST /admin/mapel -> create mapel
 func CreateAdminMapel(c echo.Context) error {
 	var payload struct {
-		kode_mapel string `json:"kode_mapel"`
-		nama_mapel string `json:"nama_mapel"`
-		teacher_id string `json:"teacher_id"`
+		kodeMapel string `json:"kode_mapel"`
+		namaMapel string `json:"nama_mapel"`
+		teacherID string `json:"teacher_id"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO mapel (kode_mapel, nama_mapel, teacher_id) VALUES ($1, $2, $3)",
-		payload.kode_mapel, payload.nama_mapel, payload.teacher_id)
+		payload.kodeMapel, payload.namaMapel, payload.teacherID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -329,16 +353,16 @@ func CreateAdminMapel(c echo.Context) error {
 func UpdateAdminMapel(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		kode_mapel string `json:"kode_mapel"`
-		nama_mapel string `json:"nama_mapel"`
-		teacher_id string `json:"teacher_id"`
+		kodeMapel string `json:"kode_mapel"`
+		namaMapel string `json:"nama_mapel"`
+		teacherID string `json:"teacher_id"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"UPDATE mapel SET kode_mapel = $1, nama_mapel = $2, teacher_id = $3 WHERE id_mapel = $4",
-		payload.kode_mapel, payload.nama_mapel, payload.teacher_id, id)
+		payload.kodeMapel, payload.namaMapel, payload.teacherID, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -359,10 +383,12 @@ func DeleteAdminMapel(c echo.Context) error {
 func GetAdminSiswa(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT s.id, s.nis, s.nisn, s.status, s.jenis_kelamin, s.cls_id, s.cls_name, p.full_name, p.email, p.role, p.status FROM siswa s JOIN profiles p ON s.profile_id = p.id"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE s.role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -370,11 +396,23 @@ func GetAdminSiswa(c echo.Context) error {
 
 	var siswa []map[string]interface{}
 	for rows.Next() {
-		var s map[string]interface{}
-		if err := rows.Scan(&s["id"], &s["nis"], &s["nisn"], &s["status"], &s["jenis_kelamin"], &s["cls_id"], &s["cls_name"], &s["full_name"], &s["email"], &s["role"], &s["status"]); err != nil {
+		var id, nis, nisn, status, jenisKelamin, clsID, clsName, fullName, email, roleVal, statusVal string
+		if err := rows.Scan(&id, &nis, &nisn, &status, &jenisKelamin, &clsID, &clsName, &fullName, &email, &roleVal, &statusVal); err != nil {
 			continue
 		}
-		siswa = append(siswa, s)
+		siswa = append(siswa, map[string]interface{}{
+			"id":              id,
+			"nis":             nis,
+			"nisn":            nisn,
+			"status":          status,
+			"jenis_kelamin":   jenisKelamin,
+			"cls_id":          clsID,
+			"cls_name":        clsName,
+			"full_name":       fullName,
+			"email":           email,
+			"role":            roleVal,
+			"status_profiles": statusVal,
+		})
 	}
 	return c.JSON(http.StatusOK, siswa)
 }
@@ -382,23 +420,23 @@ func GetAdminSiswa(c echo.Context) error {
 // POST /admin/siswa -> create siswa (requires profile_id)
 func CreateAdminSiswa(c echo.Context) error {
 	var payload struct {
-		nis      string `json:"nis"`
-		nisn     string `json:"nisn"`
-		cls_id   string `json:"cls_id"`
-		cls_name string `json:"cls_name"`
-		status   string `json:"status"`
-		full_name string `json:"full_name"`
-		email    string `json:"email"`
-		nip_nis  string `json:"nip_nis"`
-		role     string `json:"role"`
-		status_  string `json:"status_"` // status in profiles
+		Nis        string `json:"nis"`
+		Nisn       string `json:"nisn"`
+		ClsID      string `json:"cls_id"`
+		ClsName    string `json:"cls_name"`
+		Status     string `json:"status"`
+		FullName   string `json:"full_name"`
+		Email      string `json:"email"`
+		NipNis     string `json:"nip_nis"`
+		Role       string `json:"role"`
+		StatusP    string `json:"status_p"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
-		"INSERT INTO siswa (nis, nisn, cls_id, cls_name, status, full_name, email, nip_nis, role, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9)",
-		payload.nis, payload.nisn, payload.cls_id, payload.cls_name, payload.status, payload.full_name, payload.email, payload.nip_nis, payload.role, payload.status_)
+		"INSERT INTO siswa (nis, nisn, cls_id, cls_name, status, full_name, email, nip_nis, role, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		payload.Nis, payload.Nisn, payload.ClsID, payload.ClsName, payload.Status, payload.FullName, payload.Email, payload.NipNis, payload.Role, payload.StatusP)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -409,23 +447,23 @@ func CreateAdminSiswa(c echo.Context) error {
 func UpdateAdminSiswa(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		nis      string `json:"nis"`
-		nisn     string `json:"nisn"`
-		cls_id   string `json:"cls_id"`
-		cls_name string `json:"cls_name"`
-		status   string `json:"status"`
-		full_name string `json:"full_name"`
-		email    string `json:"email"`
-		nip_nis  string `json:"nip_nis"`
-		role     string `json:"role"`
-		status_  string `json:"status_"` // status in profiles
+		Nis        string `json:"nis"`
+		Nisn       string `json:"nisn"`
+		ClsID      string `json:"cls_id"`
+		ClsName    string `json:"cls_name"`
+		Status     string `json:"status"`
+		FullName   string `json:"full_name"`
+		Email      string `json:"email"`
+		NipNis     string `json:"nip_nis"`
+		Role       string `json:"role"`
+		StatusP    string `json:"status_p"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
-		"UPDATE siswa SET nis = $1, nisn = $2, cls_id = $2, cls_name = $4, status = $5, full_name = $6, email = $7, nip_nis = $7, role = $8, status = $9 WHERE id = $10",
-		payload.nis, payload.nisn, payload.cls_id, payload.cls_name, payload.status, payload.full_name, payload.email, payload.nip_nis, payload.role, payload.status_, id)
+		"UPDATE siswa SET nis = $1, nisn = $2, cls_id = $3, cls_name = $4, status = $5, full_name = $6, email = $7, nip_nis = $8, role = $9, status = $10 WHERE id = $10",
+		payload.Nis, payload.Nisn, payload.ClsID, payload.ClsName, payload.Status, payload.FullName, payload.Email, payload.NipNis, payload.Role, payload.StatusP, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -446,10 +484,12 @@ func DeleteAdminSiswa(c echo.Context) error {
 func GetAdminGuru(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT g.id, g.nip, g.profile_id, g.status, p.full_name, p.email, p.role, p.status FROM guru g JOIN profiles p ON g.profile_id = p.id"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE g.role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -457,11 +497,20 @@ func GetAdminGuru(c echo.Context) error {
 
 	var guru []map[string]interface{}
 	for rows.Next() {
-		var g map[string]interface{}
-		if err := rows.Scan(&g["id"], &g["nip"], &g["profile_id"], &g["status"], &g["full_name"], &g["email"], &g["role"], &g["status"]); err != nil {
+		var id, nip, profileID, status, fullName, email, roleVal, statusVal string
+		if err := rows.Scan(&id, &nip, &profileID, &status, &fullName, &email, &roleVal, &statusVal); err != nil {
 			continue
 		}
-		guru = append(guru, g)
+		guru = append(guru, map[string]interface{}{
+			"id":           id,
+			"nip":          nip,
+			"profile_id":   profileID,
+			"status":       status,
+			"full_name":    fullName,
+			"email":        email,
+			"role":         roleVal,
+			"status_p":     statusVal,
+		})
 	}
 	return c.JSON(http.StatusOK, guru)
 }
@@ -469,20 +518,20 @@ func GetAdminGuru(c echo.Context) error {
 // POST /admin/guru -> create guru
 func CreateAdminGuru(c echo.Context) error {
 	var payload struct {
-		nip      string `json:"nip"`
-		profile_id string `json:"profile_id"`
-		status   string `json:"status"`
-		full_name string `json:"full_name"`
-		email    string `json:"email"`
-		role     string `json:"role"`
-		status_  string `json:"status_"` // status in profiles
+		Nip       string `json:"nip"`
+		ProfileID string `json:"profile_id"`
+		Status    string `json:"status"`
+		FullName  string `json:"full_name"`
+		Email     string `json:"email"`
+		Role      string `json:"role"`
+		StatusP   string `json:"status_p"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO guru (nip, profile_id, status, full_name, email, role) VALUES ($1, $2, $3, $4, $5, $6)",
-		payload.nip, payload.profile_id, payload.status, payload.full_name, payload.email, payload.role)
+		payload.Nip, payload.ProfileID, payload.Status, payload.FullName, payload.Email, payload.Role)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -493,20 +542,20 @@ func CreateAdminGuru(c echo.Context) error {
 func UpdateAdminGuru(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		nip      string `json:"nip"`
-		profile_id string `json:"profile_id"`
-		status   string `json:"status"`
-		full_name string `json:"full_name"`
-		email    string `json:"email"`
-		role     string `json:"role"`
-		status_  string `json:"status_"` // status in profiles
+		Nip       string `json:"nip"`
+		ProfileID string `json:"profile_id"`
+		Status    string `json:"status"`
+		FullName  string `json:"full_name"`
+		Email     string `json:"email"`
+		Role      string `json:"role"`
+		StatusP   string `json:"status_p"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
-		"UPDATE guru SET nip = $1, profile_id = $2, status = $3, full_name = $4, email = $5, role = $5 WHERE id = $6",
-		payload.nip, payload.profile_id, payload.status, payload.full_name, payload.email, payload.role, id)
+		"UPDATE guru SET nip = $1, profile_id = $2, status = $3, full_name = $4, email = $5, role = $5 WHERE id = $7",
+		payload.Nip, payload.ProfileID, payload.Status, payload.FullName, payload.Email, payload.Role, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -527,10 +576,12 @@ func DeleteAdminGuru(c echo.Context) error {
 func GetAdminJadwal(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT j.id, j.hari, j.jam_mulai, j.jam_selesai, j.ruangan, j.penugasan_id, j.ruangan_name, p.full_name, p.nip FROM jadwal_pelajaran j JOIN profiles p ON j.penugasan_id = p.id"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE j.role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -538,11 +589,21 @@ func GetAdminJadwal(c echo.Context) error {
 
 	var jadwal []map[string]interface{}
 	for rows.Next() {
-		var j map[string]interface{}
-		if err := rows.Scan(&j["id"], &j["hari"], &j["jam_mulai"], &j["jam_selesai"], &j["ruangan"], &j["penugasan_id"], &j["ruangan_name"], &j["full_name"], &j["nip"]); err != nil {
+		var id, hari, jamMulai, jamSelesai, ruangan, penugasanID, ruanganName, fullName, nip string
+		if err := rows.Scan(&id, &hari, &jamMulai, &jamSelesai, &ruangan, &penugasanID, &ruanganName, &fullName, &nip); err != nil {
 			continue
 		}
-		jadwal = append(jadwal, j)
+		jadwal = append(jadwal, map[string]interface{}{
+			"id":            id,
+			"hari":          hari,
+			"jam_mulai":     jamMulai,
+			"jam_selesai":   jamSelesai,
+			"ruangan":       ruangan,
+			"penugasan_id":  penugasanID,
+			"ruangan_name":  ruanganName,
+			"full_name":     fullName,
+			"nip":           nip,
+		})
 	}
 	return c.JSON(http.StatusOK, jadwal)
 }
@@ -550,18 +611,18 @@ func GetAdminJadwal(c echo.Context) error {
 // POST /admin/jadwal -> create jadwal
 func CreateAdminJadwal(c echo.Context) error {
 	var payload struct {
-		hari       string `json:"hari"`
-		jam_mulai  string `json:"jam_mulai"`
-		jam_selesai string `json:"jam_selesai"`
-		penugasan_id string `json:"penugasan_id"`
-		ruangan    string `json:"ruangan"`
+		Hari        string `json:"hari"`
+		JamMulai    string `json:"jam_mulai"`
+		JamSelesai  string `json:"jam_selesai"`
+		PenugasanID string `json:"penugasan_id"`
+		Ruangan     string `json:"ruangan"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO jadwal_pelajaran (hari, jam_mulai, jam_selesai, penugasan_id, ruangan) VALUES ($1, $2, $3, $4, $5)",
-		payload.hari, payload.jam_mulai, payload.jam_selesai, payload.penugasan_id, payload.ruangan)
+		payload.Hari, payload.JamMulai, payload.JamSelesai, payload.PenugasanID, payload.Ruangan)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -572,18 +633,18 @@ func CreateAdminJadwal(c echo.Context) error {
 func UpdateAdminJadwal(c echo.Context) error {
 	id := c.Param("id")
 	var payload struct {
-		hari       string `json:"hari"`
-		jam_mulai  string `json:"jam_mulai"`
-		jam_selesai string `json:"jam_selesai"`
-		penugasan_id string `json:"penugasan_id"`
-		ruangan    string `json:"ruangan"`
+		Hari        string `json:"hari"`
+		JamMulai    string `json:"jam_mulai"`
+		JamSelesai  string `json:"jam_selesai"`
+		PenugasanID string `json:"penugasan_id"`
+		Ruangan     string `json:"ruangan"`
 	}
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	_, err := dbPool.Exec(context.Background(),
-		"UPDATE jadwal_pelajaran SET hari = $1, jam_mulai = $2, jam_selesai = $3, penugasan_id = $4, ruangan = $5 WHERE id = $5",
-		payload.hari, payload.jam_mulai, payload.jam_selesai, payload.penugasan_id, payload.ruangan, id)
+		"UPDATE jadwal_pelajaran SET hari = $1, jam_mulai = $2, jam_selesai = $3, penugasan_id = $4, ruangan = $5 WHERE id = $6",
+		payload.Hari, payload.JamMulai, payload.JamSelesai, payload.PenugasanID, payload.Ruangan, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -604,10 +665,12 @@ func DeleteAdminJadwal(c echo.Context) error {
 func GetAdminLog(c echo.Context) error {
 	role := c.QueryParam("role")
 	query := "SELECT id, user_id, action, timestamp, description FROM log_aktivitas"
+	var args []interface{}
 	if role != "" {
 		query += " WHERE role = $1"
+		args = append(args, role)
 	}
-	rows, err := dbPool.Query(context.Background(), query, role)
+	rows, err := dbPool.Query(context.Background(), query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -615,11 +678,17 @@ func GetAdminLog(c echo.Context) error {
 
 	var log []map[string]interface{}
 	for rows.Next() {
-		var l map[string]interface{}
-		if err := rows.Scan(&l["id"], &l["user_id"], &l["action"], &l["timestamp"], &l["description"]); err != nil {
-			continue
+		var id, userID, action, timestamp, description string
+		if err := rows.Scan(&id, &userID, &action, &timestamp, &description); err != nil {
+		continue
 		}
-		log = append(log, l)
+		log = append(log, map[string]interface{}{
+			"id":         id,
+			"user_id":    userID,
+			"action":     action,
+			"timestamp":  timestamp,
+			"description": description,
+		})
 	}
 	return c.JSON(http.StatusOK, log)
 }
@@ -627,8 +696,8 @@ func GetAdminLog(c echo.Context) error {
 // POST /admin/log -> log activity (admin action)
 func CreateAdminLog(c echo.Context) error {
 	var payload struct {
-		user_id string `json:"user_id"`
-		action  string `json:"action"`
+		userID      string `json:"user_id"`
+		action      string `json:"action"`
 		description string `json:"description"`
 	}
 	if err := c.Bind(&payload); err != nil {
@@ -636,7 +705,7 @@ func CreateAdminLog(c echo.Context) error {
 	}
 	_, err := dbPool.Exec(context.Background(),
 		"INSERT INTO log_aktivitas (user_id, action, description) VALUES ($1, $2, $3)",
-		payload.user_id, payload.action, payload.description)
+		payload.userID, payload.action, payload.description)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -645,16 +714,12 @@ func CreateAdminLog(c echo.Context) error {
 
 // GET /admin/dashboard -> summary stats
 func GetAdminDashboard(c echo.Context) error {
-	// Simple aggregated queries for dashboard
-	// total users
 	var totalUsers int
 	dbPool.QueryRow(context.Background(), "SELECT COUNT(*) FROM profiles").Scan(&totalUsers)
 
-	// total classes
 	var totalClasses int
 	dbPool.QueryRow(context.Background(), "SELECT COUNT(*) FROM classes").Scan(&totalClasses)
 
-	// total subjects
 	var totalSubjects int
 	dbPool.QueryRow(context.Background(), "SELECT COUNT(*) FROM mapel").Scan(&totalSubjects)
 
@@ -666,13 +731,11 @@ func GetAdminDashboard(c echo.Context) error {
 }
 
 // Register admin routes
-func RegisterAdminRoutes(e *echo.Echo) {
-	admin := e.Group("/admin")
-	admin.Use(SupabaseAuth()) // reuse existing auth middleware
+func RegisterAdminRoutes(api *echo.Group) {
+	admin := api.Group("/admin")
 	admin.Use(middleware.Logger())
 	admin.Use(middleware.Recover())
 
-	// role-based middleware for admin group
 	admin.Use(RoleMiddleware(RoleAdminAll, RoleAdmin, RoleTu, RoleKepsek))
 
 	// Dashboard
