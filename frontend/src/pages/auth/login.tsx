@@ -15,9 +15,16 @@ export function Login() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-        const r = (profile?.role?.toLowerCase() || 'siswa') as Role;
-        login(r, null);
-        nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
+      const dbRole = profile?.role || '';
+      const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
+      let r: Role =
+        normalized === 'tata-usaha' ? 'tu' :
+        normalized.includes('guru') ? 'guru' :
+        normalized.includes('wali') ? 'wali' :
+        normalized.includes('kepala') ? 'kepsek' :
+        'siswa';
+      login(r, null);
+      nav(ROLES[r].base + (r === 'tu' ? '/dashboard' : '/beranda'));
       }
     };
     handleAuth();
@@ -53,12 +60,13 @@ export function Login() {
         .eq('id', authData.user.id)
         .single();
 
-      const dbRole = profile?.role;
-      const r: Role =
-        dbRole === 'Tata Usaha' ? 'tu' :
-        dbRole === 'Guru Mapel' ? 'guru' :
-        dbRole === 'Wali Kelas' ? 'wali' :
-        dbRole === 'Kepala Sekolah' ? 'kepsek' :
+      const dbRole = profile?.role || '';
+      const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
+      let r: Role =
+        normalized === 'tata-usaha' ? 'tu' :
+        normalized.includes('guru') ? 'guru' :
+        normalized.includes('wali') ? 'wali' :
+        normalized.includes('kepala') ? 'kepsek' :
         'siswa';
 
       setIsLoading(false);
