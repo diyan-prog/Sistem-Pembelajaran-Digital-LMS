@@ -409,7 +409,7 @@ func (r *adminRepo) SiswaPengampu(ctx context.Context, id string) ([]map[string]
 	return r.db.List(ctx,
 		`SELECT p.id_pengampu, p.id_guru, p.id_mapel, p.id_kelas, p.tahun_ajaran,
 			s.name AS mapel_name, s.code AS mapel_code,
-			pr.nama_lengkap AS guru_name, c.name AS kelas_name
+			pr.nama_lengkap AS guru_name, c.name AS kelas_name, c.id AS id_kelas
 			FROM siswa sw
 			JOIN pengampu p ON sw.kelas_id = p.id_kelas
 			LEFT JOIN subjects s ON p.id_mapel = s.id

@@ -277,6 +277,7 @@ export interface SiswaPengampuGo {
   mapel_code: string;
   guru_name: string | null;
   kelas_name: string;
+  id_kelas: string;
   tahun_ajaran: string | null;
 }
 

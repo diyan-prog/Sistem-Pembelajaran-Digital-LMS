@@ -18,7 +18,7 @@ export const fetchSiswaClassesGo = async (siswaId: string) => {
   const rows = await fetchSiswaPengampuGo(siswaId);
   return rows.map(p => ({
     id: p.id_pengampu,
-    kelasId: p.kelas_name,
+    kelasId: p.id_kelas,
     subjectId: p.mapel_code,
     kode: p.mapel_name,
     guru: p.guru_name || '',

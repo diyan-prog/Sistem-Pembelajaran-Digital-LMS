@@ -52,7 +52,7 @@ Semua endpoint baru berada di `/api/v1`. Path lama dipertahankan sebagai alias d
 | PUT/DELETE | `/api/v1/admin/classes/:id`, `.../jurusan/:id`, `.../mapel/:id`, `.../siswa/:id`, `.../guru/:id`, `.../jadwal/:id` | `/api/admin/...` | sama |
 | POST | `/api/v1/admin/users` | - | super_admin, tata_usaha, tu |
 
-`POST /api/v1/admin/users` menerima `action`: `create`, `update-role`, `update-status`, `reset-password`. Endpoint ini menggantikan logika `supabase/functions/admin-users/index.ts` di sisi Go. Edge Function masih dipertahankan sampai frontend dialihkan.
+`POST /api/v1/admin/users` menerima `action`: `create`, `update-role`, `update-status`, `reset-password`, `delete`. Endpoint ini menggantikan logika Edge Function `supabase/functions/admin-users/index.ts` yang sudah dihapus.
 
 Respons baru:
 
