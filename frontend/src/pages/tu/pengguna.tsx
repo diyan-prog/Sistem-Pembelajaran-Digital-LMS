@@ -3,7 +3,7 @@ import { KeyRound, Save, UserPlus } from 'lucide-react'
 import { Btn, Card, DataTable, Input, Modal, NameCell, PageHeader, Select, Tabs, Toggle, useCrumbs, useTab } from '@/components/ui'
 import { DEFAULT_PERMISSIONS, normalizePermissions, ROLE_OPTIONS, ROLE_ORDER, roleLabel, roleValue, type PermissionRow } from '@/config/akses'
 import { useApp } from '@/context'
-import { fetchPengaturanGo, setPengaturanGo, userAction } from '@/services/api-go'
+import { DEFAULT_PASSWORD, fetchPengaturanGo, setPengaturanGo, userAction } from '@/services/api-go'
 import { fetchUsers } from '@/services/akademik'
 
 export function ManajemenPengguna() {
@@ -76,7 +76,7 @@ export function ManajemenPengguna() {
       setNewEmail('');
       setNewName('');
       setNewRole('Tata Usaha');
-      setNewPassword('password123');
+      setNewPassword(DEFAULT_PASSWORD);
       await load();
     } catch (err: any) {
       toast(err.message, 'err');
@@ -88,7 +88,7 @@ export function ManajemenPengguna() {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<string>('Tata Usaha');
-  const [newPassword, setNewPassword] = useState('password123');
+  const [newPassword, setNewPassword] = useState(DEFAULT_PASSWORD);
   const [isSubmitting, setIsSubmitting] = useState(false);
   return (
     <div><PageHeader crumbs={useCrumbs({ l: 'Manajemen Pengguna & Hak Akses' })} title="Manajemen Pengguna & Hak Akses" subtitle="Atur peran, status akun, dan izin setiap peran (Sinkron backend Go)" actions={<Btn icon={<UserPlus size={18} />} onClick={() => setShowAddModal(true)}>Tambah Pengguna</Btn>} />
@@ -111,9 +111,9 @@ export function ManajemenPengguna() {
             toast(err.message, 'err');
           }
         }} /> }]}
-        actions={(u: any) => [{ l: 'Reset Kata Sandi', icon: <KeyRound size={16} />, onClick: () => confirm({ title: 'Reset Kata Sandi?', message: `Kata sandi ${u.nama} akan diatur ulang ke password123.`, okLabel: 'Ya, Reset', onOk: async () => {
-          await userAction({ action: 'reset-password', id: u.id, password: 'password123' });
-          toast('Kata sandi berhasil direset ke password123', 'info');
+        actions={(u: any) => [{ l: 'Reset Kata Sandi', icon: <KeyRound size={16} />, onClick: () => confirm({ title: 'Reset Kata Sandi?', message: `Kata sandi ${u.nama} akan diatur ulang.`, okLabel: 'Ya, Reset', onOk: async () => {
+          await userAction({ action: 'reset-password', id: u.id, password: DEFAULT_PASSWORD });
+          toast('Kata sandi berhasil direset', 'info');
         }}) }]} />
         : <Card pad={false} className="overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm min-w-[720px]"><thead className="bg-gray-50 text-xs uppercase text-muted"><tr><th className="p-4 text-left">Izin</th>{ROLE_ORDER.map((r) => <th key={r} className="text-center">{r}</th>)}</tr></thead><tbody>{perm.map((p, i) => <tr key={i} className="border-t border-line h-14 hover:bg-gray-50"><td className="p-4 font-semibold">{p[0]}</td>{[1, 2, 3, 4, 5].map((c) => <td key={c} className="text-center"><input type="checkbox" aria-label={`${p[0]} ${ROLE_ORDER[c - 1]}`} checked={!!p[c]} onChange={() => setPerm(perm.map((x, j) => (j === i ? x.map((v, k) => (k === c ? !v : v)) as PermissionRow : x)))} className="w-5 h-5 accent-[#0B3D5F]" /></td>)}</tr>)}</tbody></table></div><div className="p-4 border-t border-line flex justify-end"><Btn icon={<Save size={18} />} loading={savingPerm} onClick={savePermissions}>Simpan Hak Akses</Btn></div></Card>}</div>
   )

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { adminList, adminCreate, adminUpdate, adminDelete } from '@/services/api-go';
 
 // ==================== TYPES ====================
 export interface Pertemuan {
@@ -84,199 +84,139 @@ export interface HasilKuis {
 
 // ==================== PERTEMUAN ====================
 export const fetchPertemuan = async (pengampuId: string) => {
-  const { data, error } = await supabase
-    .from('pertemuan')
-    .select('*')
-    .eq('id_pengampu', pengampuId)
-    .order('no_pertemuan', { ascending: true });
-  if (error) throw error;
-  return data as Pertemuan[];
+  const rows = await adminList<any>('pertemuan', pengampuId ? `?role=${pengampuId}` : '');
+  return (rows || []).sort((a: any, b: any) => (a.no_pertemuan || 0) - (b.no_pertemuan || 0));
 };
 
 export const createPertemuan = async (p: Omit<Pertemuan, 'id_pertemuan' | 'created_at'>) => {
-  const { data, error } = await supabase.from('pertemuan').insert(p).select().single();
-  if (error) throw error;
-  return data as Pertemuan;
+  return adminCreate<Pertemuan>('pertemuan', p);
 };
 
 export const updatePertemuan = async (id: string, updates: Partial<Pertemuan>) => {
-  const { error } = await supabase.from('pertemuan').update(updates).eq('id_pertemuan', id);
-  if (error) throw error;
+  return adminUpdate('pertemuan', id, updates);
 };
 
 export const deletePertemuan = async (id: string) => {
-  const { error } = await supabase.from('pertemuan').delete().eq('id_pertemuan', id);
-  if (error) throw error;
+  return adminDelete('pertemuan', id);
 };
 
 // ==================== MATERI ====================
 export const fetchMateri = async (pengampuId: string) => {
-  const { data, error } = await supabase
-    .from('materi')
-    .select('*')
-    .eq('id_pengampu', pengampuId)
-    .order('tanggal_upload', { ascending: false });
-  if (error) throw error;
-  return data as Materi[];
+  const rows = await adminList<any>('materi', pengampuId ? `?role=${pengampuId}` : '');
+  return (rows || []).sort((a: any, b: any) => (new Date(b.tanggal_upload || '').getTime()) - (new Date(a.tanggal_upload || '').getTime()));
 };
 
 export const createMateri = async (materi: Omit<Materi, 'id_materi' | 'tanggal_upload'>) => {
-  const { data, error } = await supabase.from('materi').insert(materi).select().single();
-  if (error) throw error;
-  return data as Materi;
+  return adminCreate<Materi>('materi', materi);
 };
 
 export const updateMateri = async (id: string, updates: Partial<Materi>) => {
-  const { error } = await supabase.from('materi').update(updates).eq('id_materi', id);
-  if (error) throw error;
+  return adminUpdate('materi', id, updates);
 };
 
 export const deleteMateri = async (id: string) => {
-  const { error } = await supabase.from('materi').delete().eq('id_materi', id);
-  if (error) throw error;
+  return adminDelete('materi', id);
 };
 
 // ==================== TUGAS ====================
 export const fetchTugas = async (pengampuId?: string) => {
-  let query = supabase.from('tugas').select('*').order('deadline', { ascending: false });
-  if (pengampuId) query = query.eq('id_pengampu', pengampuId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Tugas[];
+  const rows = await adminList<any>('tugas', '');
+  const list = rows || [];
+  if (pengampuId) {
+    return list.filter((t: any) => t.id_pengampu === pengampuId);
+  }
+  return list.sort((a: any, b: any) => (new Date(b.deadline || '').getTime()) - (new Date(a.deadline || '').getTime()));
 };
 
 export const fetchTugasById = async (id: string) => {
-  const { data, error } = await supabase.from('tugas').select('*').eq('id_tugas', id).single();
-  if (error) throw error;
-  return data as Tugas;
+  const rows = await adminList<any>('tugas', '');
+  return (rows || []).find((t: any) => t.id_tugas === id) ?? null;
 };
 
 export const createTugas = async (tugas: Omit<Tugas, 'id_tugas' | 'created_at'>) => {
-  const { data, error } = await supabase.from('tugas').insert(tugas).select().single();
-  if (error) throw error;
-  return data as Tugas;
+  return adminCreate<Tugas>('tugas', tugas);
 };
 
 export const updateTugas = async (id: string, updates: Partial<Tugas>) => {
-  const { error } = await supabase.from('tugas').update(updates).eq('id_tugas', id);
-  if (error) throw error;
+  return adminUpdate('tugas', id, updates);
 };
 
 export const deleteTugas = async (id: string) => {
-  const { error } = await supabase.from('tugas').delete().eq('id_tugas', id);
-  if (error) throw error;
+  return adminDelete('tugas', id);
 };
 
 // ==================== PENGUMPULAN TUGAS ====================
 export const fetchPengumpulanTugas = async (tugasId: string) => {
-  const { data, error } = await supabase
-    .from('pengumpulan_tugas')
-    .select(`
-      *,
-      siswa:profiles!pengumpulan_tugas_id_siswa_fkey(full_name, nip_nis)
-    `)
-    .eq('id_tugas', tugasId)
-    .order('waktu_kumpul', { ascending: false });
-  if (error) throw error;
-  return data;
+  const rows = await adminList<any>('pengumpulan_tugas', `?role=${tugasId}`);
+  return rows || [];
 };
 
 export const submitTugas = async (tugasId: string, siswaId: string, fileJawaban: string, catatan?: string) => {
-  const { error } = await supabase
-    .from('pengumpulan_tugas')
-    .upsert({
-      id_tugas: tugasId,
-      id_siswa: siswaId,
-      file_jawaban: fileJawaban,
-      catatan_siswa: catatan,
-      waktu_kumpul: new Date().toISOString(),
-      status: 'Dikumpulkan'
-    }, { onConflict: 'id_tugas,id_siswa' });
-  if (error) throw error;
+  return adminCreate('pengumpulan_tugas', {
+    id_tugas: tugasId,
+    id_siswa: siswaId,
+    file_jawaban: fileJawaban,
+    catatan_siswa: catatan,
+    waktu_kumpul: new Date().toISOString(),
+    status: 'Dikumpulkan'
+  });
 };
 
 export const nilaiTugas = async (id: string, nilai: number, feedback?: string) => {
-  const { error } = await supabase
-    .from('pengumpulan_tugas')
-    .update({ nilai, feedback_guru: feedback, status: 'Dinilai' })
-    .eq('id_pengumpulan', id);
-  if (error) throw error;
+  return adminUpdate('pengumpulan_tugas', id, { nilai, feedback_guru: feedback, status: 'Dinilai' });
 };
 
 // ==================== KUIS ====================
 export const fetchKuis = async (pengampuId?: string) => {
-  let query = supabase.from('kuis').select('*').order('waktu_mulai', { ascending: false });
-  if (pengampuId) query = query.eq('id_pengampu', pengampuId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Kuis[];
+  const rows = await adminList<any>('kuis', '');
+  const list = rows || [];
+  if (pengampuId) {
+    return list.filter((k: any) => k.id_pengampu === pengampuId);
+  }
+  return list.sort((a: any, b: any) => (new Date(b.waktu_mulai || '').getTime()) - (new Date(a.waktu_mulai || '').getTime()));
 };
 
 export const fetchKuisById = async (id: string) => {
-  const { data, error } = await supabase.from('kuis').select('*').eq('id_kuis', id).single();
-  if (error) throw error;
-  return data as Kuis;
+  const rows = await adminList<any>('kuis', '');
+  return (rows || []).find((k: any) => k.id_kuis === id) ?? null;
 };
 
 export const createKuis = async (kuis: Omit<Kuis, 'id_kuis' | 'created_at'>) => {
-  const { data, error } = await supabase.from('kuis').insert(kuis).select().single();
-  if (error) throw error;
-  return data as Kuis;
+  return adminCreate<Kuis>('kuis', kuis);
 };
 
 export const updateKuis = async (id: string, updates: Partial<Kuis>) => {
-  const { error } = await supabase.from('kuis').update(updates).eq('id_kuis', id);
-  if (error) throw error;
+  return adminUpdate('kuis', id, updates);
 };
 
 export const deleteKuis = async (id: string) => {
-  const { error } = await supabase.from('kuis').delete().eq('id_kuis', id);
-  if (error) throw error;
+  return adminDelete('kuis', id);
 };
 
 // ==================== SOAL KUIS ====================
 export const fetchSoalKuis = async (kuisId: string) => {
-  const { data, error } = await supabase
-    .from('soal_kuis')
-    .select('*')
-    .eq('id_kuis', kuisId)
-    .order('urutan', { ascending: true });
-  if (error) throw error;
-  return data as SoalKuis[];
+  const rows = await adminList<any>('soal_kuis', `?role=${kuisId}`);
+  return (rows || []).sort((a: any, b: any) => (a.urutan ?? 0) - (b.urutan ?? 0));
 };
 
 export const createSoalKuis = async (soal: Omit<SoalKuis, 'id_soal'>) => {
-  const { data, error } = await supabase.from('soal_kuis').insert(soal).select().single();
-  if (error) throw error;
-  return data as SoalKuis;
+  return adminCreate<SoalKuis>('soal_kuis', soal);
 };
 
 export const updateSoalKuis = async (id: string, updates: Partial<SoalKuis>) => {
-  const { error } = await supabase.from('soal_kuis').update(updates).eq('id_soal', id);
-  if (error) throw error;
+  return adminUpdate('soal_kuis', id, updates);
 };
 
 export const deleteSoalKuis = async (id: string) => {
-  const { error } = await supabase.from('soal_kuis').delete().eq('id_soal', id);
-  if (error) throw error;
+  return adminDelete('soal_kuis', id);
 };
 
 // ==================== HASIL KUIS ====================
 export const fetchHasilKuis = async (kuisId: string) => {
-  const { data, error } = await supabase
-    .from('hasil_kuis')
-    .select(`
-      *,
-      siswa:profiles!hasil_kuis_id_siswa_fkey(full_name, nip_nis)
-    `)
-    .eq('id_kuis', kuisId)
-    .order('nilai', { ascending: false });
-  if (error) throw error;
-  return data;
+  const rows = await adminList<any>('hasil_kuis', `?role=${kuisId}`);
+  return (rows || []).sort((a: any, b: any) => (new Date(b.waktu_selesai || '').getTime()) - (new Date(a.waktu_selesai || '').getTime()));
 };
 
 export const submitKuis = async (hasil: Omit<HasilKuis, 'id_hasil'>) => {
-  const { data, error } = await supabase.from('hasil_kuis').insert(hasil).select().single();
-  if (error) throw error;
-  return data as HasilKuis;
+  return adminCreate<HasilKuis>('hasil_kuis', hasil);
 };

@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase';
 
 const BASE_URL = 'http://localhost:8080/api/v1';
 
+export const DEFAULT_PASSWORD = (import.meta as any).env?.VITE_DEFAULT_PASSWORD ?? '';
+
 const getHeaders = async (token?: string) => {
   let authToken = token;
   if (!authToken) {
@@ -115,7 +117,7 @@ export const createSiswaGo = async (data: {
   const result = await userAction<{ user?: { id?: string } }>({
     action: 'create',
     email: data.email,
-    password: 'password123',
+    password: DEFAULT_PASSWORD,
     email_confirm: true,
     user_metadata: { nama_lengkap: data.nama, role: 'siswa' },
     profile_kind: 'siswa',
@@ -175,7 +177,7 @@ export const createGuruGo = async (data: {
   const result = await userAction<{ user?: { id?: string } }>({
     action: 'create',
     email: data.email,
-    password: 'password123',
+    password: DEFAULT_PASSWORD,
     email_confirm: true,
     user_metadata: { nama_lengkap: data.nama, role: 'guru' },
     profile_kind: 'guru',
