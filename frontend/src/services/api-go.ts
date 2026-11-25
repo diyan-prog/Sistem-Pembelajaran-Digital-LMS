@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:8080/api/v1';
 
 const getHeaders = async (token?: string) => {
   let authToken = token;
@@ -14,19 +14,35 @@ const getHeaders = async (token?: string) => {
   };
 };
 
+// request membungkus respons standar {success,data,error,meta} dan mengembalikan data.
 const request = async (path: string, options: RequestInit = {}, token?: string) => {
   const headers = await getHeaders(token);
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: { ...headers, ...(options.headers || {}) }
   });
+  const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request gagal: ${res.status}`);
+    const msg = body?.error?.message || body?.error || `Request gagal: ${res.status}`;
+    throw new Error(msg);
   }
   if (res.status === 204) return null;
-  return res.json();
+  return body?.data ?? body;
 };
+
+// ==================== HELPER CRUD ADMIN ====================
+// Semua resource admin berada di /admin/{resource} dan butuh role admin/tu/kepsek.
+export const adminList = async <T = any>(resource: string, query = '', token?: string): Promise<T[]> =>
+  request(`/admin/${resource}${query}`, {}, token);
+
+export const adminCreate = async <T = any>(resource: string, data: unknown, token?: string): Promise<T> =>
+  request(`/admin/${resource}`, { method: 'POST', body: JSON.stringify(data) }, token);
+
+export const adminUpdate = async <T = any>(resource: string, id: string, data: unknown, token?: string): Promise<T> =>
+  request(`/admin/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token);
+
+export const adminDelete = async <T = any>(resource: string, id: string, token?: string): Promise<T> =>
+  request(`/admin/${resource}/${id}`, { method: 'DELETE' }, token);
 
 // ==================== SISWA ====================
 export interface SiswaGo {
@@ -40,23 +56,25 @@ export interface SiswaGo {
 }
 
 export const fetchSiswaGo = async (token?: string): Promise<SiswaGo[]> =>
-  request('/siswa', {}, token);
+  adminList<SiswaGo>('siswa', undefined, token);
 
-export const fetchSiswaByIdGo = async (id: string, token?: string): Promise<SiswaGo> =>
-  request(`/siswa/${id}`, {}, token);
+export const fetchSiswaByIdGo = async (id: string, token?: string): Promise<SiswaGo | null> => {
+  const list = await fetchSiswaGo(token);
+  return list.find((s) => s.id === id) ?? null;
+};
 
 export const createSiswaGo = async (data: {
   nama: string; nis: string; email: string; kelas_id: string; status?: string;
 }, token?: string): Promise<{ id: string }> =>
-  request('/siswa', { method: 'POST', body: JSON.stringify(data) }, token);
+  adminCreate('siswa', data, token);
 
 export const updateSiswaGo = async (id: string, data: {
   nama: string; nis: string; email: string; kelas_id: string; status?: string;
 }, token?: string): Promise<{ message: string }> =>
-  request(`/siswa/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token);
+  adminUpdate('siswa', id, data, token);
 
 export const deleteSiswaGo = async (id: string, token?: string): Promise<{ message: string }> =>
-  request(`/siswa/${id}`, { method: 'DELETE' }, token);
+  adminDelete('siswa', id, token);
 
 // ==================== GURU ====================
 export interface GuruGo {
@@ -68,7 +86,7 @@ export interface GuruGo {
 }
 
 export const fetchGuruGo = async (token?: string): Promise<GuruGo[]> =>
-  request('/guru', {}, token);
+  adminList<GuruGo>('guru', undefined, token);
 
 // ==================== MAPEL ====================
 export interface MapelGo {
@@ -78,7 +96,7 @@ export interface MapelGo {
 }
 
 export const fetchMapelGo = async (token?: string): Promise<MapelGo[]> =>
-  request('/mapel', {}, token);
+  adminList<MapelGo>('mapel', undefined, token);
 
 // ==================== KELAS ====================
 export interface KelasGo {
@@ -87,7 +105,7 @@ export interface KelasGo {
 }
 
 export const fetchKelasGo = async (token?: string): Promise<KelasGo[]> =>
-  request('/kelas', {}, token);
+  adminList<KelasGo>('classes', undefined, token);
 
 // ==================== PENGUMUMAN ====================
 export interface PengumumanGo {
@@ -103,9 +121,9 @@ export interface PengumumanGo {
 }
 
 export const fetchPengumumanGo = async (role?: string, token?: string): Promise<PengumumanGo[]> => {
-  const url = new URL(`${BASE_URL}/pengumuman`);
-  if (role) url.searchParams.set('role', role);
-  return request(url.toString(), {}, token);
+  const list = await adminList<PengumumanGo>('pengumuman', undefined, token);
+  if (!role) return list;
+  return list.filter((p) => !p.target_role || p.target_role === role);
 };
 
 // ==================== SISWA KELAS (pengampu per siswa) ====================
