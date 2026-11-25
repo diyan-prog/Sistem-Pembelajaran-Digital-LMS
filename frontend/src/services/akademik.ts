@@ -8,7 +8,7 @@
  * karena butuh endpoint agregasi backend yang belum tersedia.
  */
 import { supabase } from '@/lib/supabase';
-import { adminList, adminCreate, adminUpdate, adminDelete, adminGet } from './api-go';
+import { adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo } from './api-go';
 import type { Slot } from '@/mocks';
 
 // ==================== TYPES ====================
@@ -29,6 +29,8 @@ export interface Kelas {
   grade: number;
   major: string;
   academic_year: string;
+  tingkat?: number | null;
+  jurusan_id?: string | null;
   wali_kelas_id?: string;
   created_at?: string;
 }
@@ -111,7 +113,8 @@ export const updateUserRole = async (id: string, role: string) => {
 export const logActivity = async (user_id: string, aksi: string, modul?: string, entitas?: string, entitas_id?: string, detail?: Record<string, unknown>, ip_address?: string) => {
   await adminCreate('log', {
     user_id, aksi, modul, entitas, entitas_id,
-    detail: detail ? JSON.stringify(detail) : '',
+    detail: detail ? JSON.stringify(detail) : '{}',
+    ip_address: ip_address || null,
   });
 };
 
@@ -347,15 +350,14 @@ export const fetchStats = async () => {
 };
 
 export const fetchSiswaPerJurusan = async () => {
-  const { data, error } = await supabase.rpc('get_siswa_per_jurusan');
-  if (error) {
-    // Fallback if RPC not exists yet
-    const { data: jurusans } = await supabase.from('jurusan').select('kode, nama');
-    const { data: siswas } = await supabase.from('siswa_kelas').select('id_kelas, kelas:classes(jurusan_id)');
-    return (jurusans || []).map(j => ({
-      n: j.kode,
-      v: (siswas || []).filter((s: any) => s.kelas?.jurusan_id === (j as { id?: string }).id).length
-    }));
-  }
-  return data;
+  const [jurusan, kelas, siswa] = await Promise.all([
+    adminList<any>('jurusan'),
+    adminList<any>('classes'),
+    fetchSiswaGo(),
+  ]);
+  const kelasById = new Map(kelas.map((k) => [k.id, k]));
+  return jurusan.map((j) => ({
+    n: j.kode,
+    v: siswa.filter((s) => kelasById.get(s.kelas_id || '')?.jurusan_id === j.id).length,
+  }));
 };

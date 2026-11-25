@@ -231,6 +231,25 @@ export const fetchPengumumanGo = async (role?: string, token?: string): Promise<
   return list.filter((p) => !p.target_role || p.target_role === role);
 };
 
+// ==================== PENGATURAN ====================
+export interface PengaturanGo {
+  key: string;
+  value: unknown;
+  updated_at: string | null;
+}
+
+export const fetchPengaturanGo = async (token?: string): Promise<PengaturanGo[]> =>
+  adminList<PengaturanGo>('pengaturan', undefined, token);
+
+export const setPengaturanGo = async (key: string, value: unknown, token?: string): Promise<void> => {
+  const rows = await fetchPengaturanGo(token);
+  if (rows.some((r) => r.key === key)) {
+    await adminUpdate('pengaturan', key, { key, value }, token);
+  } else {
+    await adminCreate('pengaturan', { key, value }, token);
+  }
+};
+
 // ==================== SISWA KELAS (pengampu per siswa) ====================
 export interface SiswaPengampuGo {
   id_pengampu: string;
