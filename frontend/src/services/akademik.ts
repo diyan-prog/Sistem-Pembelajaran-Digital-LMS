@@ -3,9 +3,9 @@
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
  *
  * CRUD & read sederhana sudah lewat backend Go (/api/v1/admin/*).
- * Fungsi join kompleks (fetchPengampu, fetchSiswaKelas, getSiswaByKelas,
- * createSiswa, createGuru, fetchSiswaPerJurusan) masih memakai Supabase
- * karena butuh endpoint agregasi backend yang belum tersedia.
+ * Fungsi join kompleks (fetchSiswaKelas, getSiswaByKelas, createSiswa,
+ * createGuru) masih memakai Supabase karena butuh endpoint agregasi backend
+ * yang belum tersedia.
  */
 import { supabase } from '@/lib/supabase';
 import { adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo } from './api-go';
@@ -190,21 +190,9 @@ export const deleteMapel = async (id: string) =>
   adminDelete('mapel', id);
 
 // ==================== PENGAMPU (PENUGASAN GURU) ====================
-// TODO: butuh endpoint agregasi (join guru/mapel/kelas). Sementara tetap Supabase.
 export const fetchPengampu = async (kelasId?: string, guruId?: string) => {
-  let query = supabase
-    .from('pengampu')
-    .select(`
-      *,
-      guru:profiles!pengampu_id_guru_fkey(full_name, role),
-      mapel:subjects!pengampu_id_mapel_fkey(name, code),
-      kelas:classes!pengampu_id_kelas_fkey(name, grade, major)
-    `);
-  if (kelasId) query = query.eq('id_kelas', kelasId);
-  if (guruId) query = query.eq('id_guru', guruId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as (Pengampu & { guru?: User; mapel?: Subject; kelas?: Kelas })[];
+  const rows = await adminList<Pengampu & { guru?: User; mapel?: Subject; kelas?: Kelas }>('pengampu');
+  return rows.filter((p) => (!kelasId || p.id_kelas === kelasId) && (!guruId || p.id_guru === guruId));
 };
 
 export const createPengampu = async (pengampu: Omit<Pengampu, 'id_pengampu' | 'created_at'>) =>

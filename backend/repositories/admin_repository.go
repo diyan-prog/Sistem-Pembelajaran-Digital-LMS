@@ -338,8 +338,15 @@ var specs = map[string]resourceSpec{
 		createMsg: "notifikasi created", updateMsg: "notifikasi updated", deleteMsg: "notifikasi deleted",
 	},
 	"pengampu": {
-		list:      "SELECT id_pengampu, id_guru, id_kelas, id_mapel, tahun_ajaran FROM pengampu",
-		filterCol: "tahun_ajaran",
+		list: `SELECT p.id_pengampu, p.id_guru, p.id_kelas, p.id_mapel, p.tahun_ajaran,
+			json_build_object('full_name', g.nama_lengkap, 'role', g.role) AS guru,
+			json_build_object('name', m.name, 'code', m.code) AS mapel,
+			json_build_object('name', k.name, 'grade', k.grade, 'major', k.major) AS kelas
+			FROM pengampu p
+			LEFT JOIN profiles g ON p.id_guru = g.id
+			LEFT JOIN subjects m ON p.id_mapel = m.id
+			LEFT JOIN classes k ON p.id_kelas = k.id`,
+		filterCol: "p.tahun_ajaran",
 		insert:    "INSERT INTO pengampu (id_guru, id_kelas, id_mapel, tahun_ajaran) VALUES ($1, $2, $3, $4)",
 		update:    "UPDATE pengampu SET id_guru = $1, id_kelas = $2, id_mapel = $3, tahun_ajaran = $4 WHERE id_pengampu = $5",
 		remove:    "DELETE FROM pengampu WHERE id_pengampu = $1",
