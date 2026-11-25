@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -53,6 +54,31 @@ func (d *DB) Count(ctx context.Context, query string, args ...interface{}) (int,
 	var count int
 	err := d.Pool.QueryRow(ctx, query, args...).Scan(&count)
 	return count, err
+}
+
+// One mengembalikan satu baris hasil query dalam bentuk map kolom -> nilai.
+func (d *DB) One(ctx context.Context, query string, args ...interface{}) (map[string]interface{}, error) {
+	rows, err := d.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	fields := rows.FieldDescriptions()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("query tidak mengembalikan baris")
+	}
+	values, err := rows.Values()
+	if err != nil {
+		return nil, err
+	}
+	row := make(map[string]interface{}, len(fields))
+	for i, field := range fields {
+		row[string(field.Name)] = values[i]
+	}
+	return row, nil
 }
 
 // nullable mengembalikan nil jika string kosong (untuk kolom NULL).

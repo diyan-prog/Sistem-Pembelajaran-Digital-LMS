@@ -396,10 +396,12 @@ func (r *adminRepo) Create(ctx context.Context, resource string, payload interfa
 	if !ok {
 		return nil, fmt.Errorf("unknown resource %q", resource)
 	}
-	if err := r.db.Exec(ctx, spec.insert, spec.insertArgs(payload)...); err != nil {
+	row, err := r.db.One(ctx, spec.insert+" RETURNING *", spec.insertArgs(payload)...)
+	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"message": spec.createMsg}, nil
+	row["message"] = spec.createMsg
+	return row, nil
 }
 
 func (r *adminRepo) Update(ctx context.Context, resource, id string, payload interface{}) (map[string]interface{}, error) {
