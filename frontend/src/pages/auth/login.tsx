@@ -18,7 +18,7 @@ export function Login() {
       const dbRole = profile?.role || '';
       const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
       let r: Role =
-        normalized === 'tata-usaha' ? 'tu' :
+        normalized === 'tata-usaha' || normalized === 'admin' || normalized === 'super-admin' ? 'tu' :
         normalized.includes('guru') ? 'guru' :
         normalized.includes('wali') ? 'wali' :
         normalized.includes('kepala') ? 'kepsek' :
@@ -63,7 +63,7 @@ export function Login() {
       const dbRole = profile?.role || '';
       const normalized = dbRole.toLowerCase().replace(/\s+/g, '-');
       let r: Role =
-        normalized === 'tata-usaha' ? 'tu' :
+        normalized === 'tata-usaha' || normalized === 'admin' || normalized === 'super-admin' ? 'tu' :
         normalized.includes('guru') ? 'guru' :
         normalized.includes('wali') ? 'wali' :
         normalized.includes('kepala') ? 'kepsek' :
