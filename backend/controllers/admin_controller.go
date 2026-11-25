@@ -31,20 +31,6 @@ func (ctl *AdminController) List(resource string) echo.HandlerFunc {
 	}
 }
 
-// legacyMapelPayload mencerminkan payload lama yang memakai field unexported.
-// deprecated: encoding/json tidak mengisi field, sehingga nilainya kosong.
-type legacyMapelPayload struct {
-	kodeMapel string
-	namaMapel string
-	teacherID string
-}
-
-type legacyLogPayload struct {
-	userID      string
-	action      string
-	description string
-}
-
 func bindPayload(c echo.Context, resource string) (interface{}, error) {
 	switch resource {
 	case "classes":
@@ -56,9 +42,9 @@ func bindPayload(c echo.Context, resource string) (interface{}, error) {
 		err := c.Bind(&p)
 		return p, err
 	case "mapel":
-		var p legacyMapelPayload
+		var p models.MapelPayload
 		err := c.Bind(&p)
-		return models.MapelPayload{}, err
+		return p, err
 	case "siswa":
 		var p models.SiswaPayload
 		err := c.Bind(&p)
@@ -72,9 +58,37 @@ func bindPayload(c echo.Context, resource string) (interface{}, error) {
 		err := c.Bind(&p)
 		return p, err
 	case "log":
-		var p legacyLogPayload
+		var p models.LogPayload
 		err := c.Bind(&p)
-		return models.LogPayload{}, err
+		return p, err
+	case "pengumuman":
+		var p models.PengumumanPayload
+		err := c.Bind(&p)
+		return p, err
+	case "presensi":
+		var p models.PresensiPayload
+		err := c.Bind(&p)
+		return p, err
+	case "tugas":
+		var p models.TugasPayload
+		err := c.Bind(&p)
+		return p, err
+	case "pengumpulan_tugas":
+		var p models.PengumpulanTugasPayload
+		err := c.Bind(&p)
+		return p, err
+	case "kuis":
+		var p models.KuisPayload
+		err := c.Bind(&p)
+		return p, err
+	case "tahun_ajaran":
+		var p models.TahunAjaranPayload
+		err := c.Bind(&p)
+		return p, err
+	case "pengaturan":
+		var p models.PengaturanPayload
+		err := c.Bind(&p)
+		return p, err
 	default:
 		return nil, services.Validation("resource tidak dikenal")
 	}

@@ -54,3 +54,19 @@ func (d *DB) Count(ctx context.Context, query string, args ...interface{}) (int,
 	err := d.Pool.QueryRow(ctx, query, args...).Scan(&count)
 	return count, err
 }
+
+// nullable mengembalikan nil jika string kosong (untuk kolom NULL).
+func nullable(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// nullableInt mengembalikan nil jika nilai 0 (untuk kolom NULL).
+func nullableInt(n int) interface{} {
+	if n == 0 {
+		return nil
+	}
+	return n
+}

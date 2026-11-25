@@ -24,6 +24,9 @@ func NewAdminService(repo AdminRepository) *AdminService {
 var allowedResources = map[string]bool{
 	"classes": true, "jurusan": true, "mapel": true, "siswa": true,
 	"guru": true, "jadwal": true, "log": true,
+	"pengumuman": true, "presensi": true,
+	"tugas": true, "pengumpulan_tugas": true, "kuis": true,
+	"tahun_ajaran": true, "pengaturan": true,
 }
 
 func checkResource(resource string) error {
