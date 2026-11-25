@@ -3,9 +3,8 @@
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
  *
  * CRUD & read sederhana sudah lewat backend Go (/api/v1/admin/*).
- * Fungsi join kompleks (fetchSiswaKelas, getSiswaByKelas, createSiswa,
- * createGuru) masih memakai Supabase karena butuh endpoint agregasi backend
- * yang belum tersedia.
+ * Fungsi join kompleks (getSiswaByKelas, createSiswa, createGuru) masih
+ * memakai Supabase karena butuh endpoint agregasi backend yang belum tersedia.
  */
 import { supabase } from '@/lib/supabase';
 import { adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo } from './api-go';
@@ -205,33 +204,28 @@ export const deletePengampu = async (id: string) =>
   adminDelete('pengampu', id);
 
 // ==================== SISWA KELAS ====================
-// TODO: butuh endpoint agregasi. Sementara tetap Supabase.
+// Data kelas siswa dibaca dari tabel siswa yang sudah dipetakan backend Go.
 export const fetchSiswaKelas = async (kelasId?: string) => {
-  let query = supabase
-    .from('siswa_kelas')
-    .select(`
-      *,
-      user:profiles!siswa_kelas_id_siswa_fkey(full_name, email, role, status),
-      kelas:classes!siswa_kelas_id_kelas_fkey(name, grade, major)
-    `);
-  if (kelasId) query = query.eq('id_kelas', kelasId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+  const rows = await fetchSiswaGo();
+  return rows
+    .filter((s) => !kelasId || s.kelas_id === kelasId)
+    .map((s) => ({
+      id_siswa: s.profile_id,
+      id_kelas: s.kelas_id,
+      tahun_ajaran: '',
+      created_at: undefined,
+      user: {
+        id: s.profile_id,
+        full_name: s.nama,
+        email: s.email,
+        role: 'siswa',
+        status: s.status,
+        nip_nis: s.nis,
+      },
+    }));
 };
 
-export const getSiswaByKelas = async (kelasId: string) => {
-  const { data, error } = await supabase
-    .from('siswa_kelas')
-    .select(`
-      *,
-      user:profiles!siswa_kelas_id_siswa_fkey(full_name, email, role, status, nip_nis)
-    `)
-    .eq('id_kelas', kelasId)
-    .order('user->>full_name', { ascending: true });
-  if (error) throw error;
-  return data;
-};
+export const getSiswaByKelas = async (kelasId: string) => fetchSiswaKelas(kelasId);
 
 // ==================== JURUSAN (dari classes.major) ====================
 export const fetchJurusan = async () => {
