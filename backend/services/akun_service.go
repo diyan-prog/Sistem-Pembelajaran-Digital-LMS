@@ -66,12 +66,65 @@ func (s *AkunService) DeleteProfile(ctx context.Context, id string) (map[string]
 	return s.repo.DeleteProfile(ctx, id)
 }
 
+// linkedProfileCreator diimplementasikan akunRepo untuk membuat baris
+// siswa/guru setelah user Auth berhasil dibuat.
+type linkedProfileCreator interface {
+	CreateLinkedProfile(ctx context.Context, payload models.CreateLinkedProfilePayload) error
+}
+
+type authUserDeleter interface {
+	DeleteAuthUser(ctx context.Context, id string) error
+}
+
 // CreateUser menggantikan aksi `create` pada Edge Function admin-users.
 func (s *AkunService) CreateUser(ctx context.Context, payload models.CreateUserPayload) (map[string]interface{}, error) {
 	if strings.TrimSpace(payload.Email) == "" || strings.TrimSpace(payload.Password) == "" {
 		return nil, Validation("email dan kata sandi wajib diisi")
 	}
-	return s.repo.CreateAuthUser(ctx, payload)
+	result, err := s.repo.CreateAuthUser(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	if payload.ProfileKind == "" {
+		return result, nil
+	}
+	creator, ok := s.repo.(linkedProfileCreator)
+	if !ok {
+		return nil, Validation("repo tidak mendukung pembuatan profil terkait")
+	}
+	profileID := authUserID(result)
+	if profileID == "" {
+		return nil, Validation("ID user Auth tidak ditemukan")
+	}
+	if err := creator.CreateLinkedProfile(ctx, models.CreateLinkedProfilePayload{
+		ProfileID: profileID, Kind: payload.ProfileKind,
+		Nis: payload.Nis, Nip: payload.Nip, KelasID: payload.KelasID,
+		JenisKelamin: payload.JenisKelamin, Status: payload.Status,
+	}); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func authUserID(result map[string]interface{}) string {
+	user, ok := result["user"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	id, _ := user["id"].(string)
+	return id
+}
+
+// DeleteUser menghapus user Auth beserta profile terkait.
+func (s *AkunService) DeleteUser(ctx context.Context, id string) error {
+	if strings.TrimSpace(id) == "" {
+		return Validation("ID wajib diisi")
+	}
+	if deleter, ok := s.repo.(authUserDeleter); ok {
+		return deleter.DeleteAuthUser(ctx, id)
+	}
+	_, err := s.repo.DeleteProfile(ctx, id)
+	return err
 }
 
 func (s *AkunService) UpdateRole(ctx context.Context, payload models.UpdateFieldPayload) error {

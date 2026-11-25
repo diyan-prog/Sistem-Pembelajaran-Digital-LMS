@@ -65,6 +65,11 @@ type userActionPayload struct {
 	ID           string                 `json:"id"`
 	Role         string                 `json:"role"`
 	Status       string                 `json:"status"`
+	ProfileKind  string                 `json:"profile_kind"`
+	Nis          string                 `json:"nis"`
+	Nip          string                 `json:"nip"`
+	KelasID      string                 `json:"kelas_id"`
+	JenisKelamin string                 `json:"jenis_kelamin"`
 }
 
 // UserAction menggantikan aksi Edge Function admin-users.
@@ -81,6 +86,9 @@ func (ctl *AkunController) UserAction(c echo.Context) error {
 		data, err = ctl.svc.CreateUser(ctx, models.CreateUserPayload{
 			Email: payload.Email, Password: payload.Password,
 			EmailConfirm: payload.EmailConfirm, UserMetadata: payload.UserMetadata,
+			ProfileKind: payload.ProfileKind, Nis: payload.Nis, Nip: payload.Nip,
+			KelasID: payload.KelasID, JenisKelamin: payload.JenisKelamin,
+			Status: payload.Status,
 		})
 	case "update-role":
 		err = ctl.svc.UpdateRole(ctx, models.UpdateFieldPayload{ID: payload.ID, Role: payload.Role})
@@ -90,6 +98,9 @@ func (ctl *AkunController) UserAction(c echo.Context) error {
 		data = map[string]bool{"ok": true}
 	case "reset-password":
 		err = ctl.svc.ResetPassword(ctx, models.ResetPasswordPayload{ID: payload.ID, Password: payload.Password})
+		data = map[string]bool{"ok": true}
+	case "delete":
+		err = ctl.svc.DeleteUser(ctx, payload.ID)
 		data = map[string]bool{"ok": true}
 	default:
 		err = services.Validation("aksi tidak dikenal")

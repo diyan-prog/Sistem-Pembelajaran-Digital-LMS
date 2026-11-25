@@ -32,6 +32,24 @@ type CreateUserPayload struct {
 	Password     string                 `json:"password"`
 	EmailConfirm bool                   `json:"email_confirm"`
 	UserMetadata map[string]interface{} `json:"user_metadata"`
+	ProfileKind  string                 `json:"profile_kind"`
+	Nis          string                 `json:"nis"`
+	Nip          string                 `json:"nip"`
+	KelasID      string                 `json:"kelas_id"`
+	JenisKelamin string                 `json:"jenis_kelamin"`
+	Status       string                 `json:"status"`
+}
+
+// CreateLinkedProfilePayload dipakai setelah user Auth dibuat agar baris
+// siswa/guru memiliki profile_id yang sama.
+type CreateLinkedProfilePayload struct {
+	ProfileID    string
+	Kind         string
+	Nis          string
+	Nip          string
+	KelasID      string
+	JenisKelamin string
+	Status       string
 }
 
 type UpdateFieldPayload struct {

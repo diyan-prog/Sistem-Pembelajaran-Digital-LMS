@@ -1,9 +1,14 @@
 /**
  * Layanan Data Akademik
  * Mengelola: users, classes, subjects, pengampu, siswa_kelas, jurusan
+ *
+ * CRUD & read sederhana sudah lewat backend Go (/api/v1/admin/*).
+ * Fungsi join kompleks (fetchPengampu, fetchSiswaKelas, getSiswaByKelas,
+ * createSiswa, createGuru, fetchSiswaPerJurusan) masih memakai Supabase
+ * karena butuh endpoint agregasi backend yang belum tersedia.
  */
 import { supabase } from '@/lib/supabase';
-import { fetchGuruGo, fetchSiswaGo, fetchMapelGo } from './api-go';
+import { adminList, adminCreate, adminUpdate, adminDelete, adminGet } from './api-go';
 import type { Slot } from '@/mocks';
 
 // ==================== TYPES ====================
@@ -56,26 +61,47 @@ export interface SiswaKelas {
 
 // ==================== USERS ====================
 export const fetchUsers = async (role?: string) => {
-  let query = supabase.from('profiles').select('*');
-  if (role) query = query.eq('role', role);
-  const { data, error } = await query.order('full_name', { ascending: true });
-  if (error) {
-    console.error('FetchUsers Error:', error);
-    throw error;
-  }
-  console.log('FetchUsers Data:', data);
-  return data as User[];
+  const rows = await adminGet<any[]>(`profiles${role ? `?role=${encodeURIComponent(role)}` : ''}`);
+  const users = (rows || []).map((r) => ({
+    id: r.id,
+    email: r.email,
+    full_name: r.nama_lengkap ?? r.full_name ?? '',
+    role: r.role,
+    status: r.status,
+    nip_nis: r.nip_nis,
+    avatar_url: r.foto_profil ?? r.avatar_url,
+    created_at: r.created_at,
+  })) as User[];
+  return users.sort((a, b) => a.full_name.localeCompare(b.full_name));
 };
 
 export const fetchUserById = async (id: string) => {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-  if (error) throw error;
-  return data as User;
+  const rows = await adminGet<any[]>('profiles');
+  const r = (rows || []).find((x) => x.id === id);
+  if (!r) throw new Error('User tidak ditemukan');
+  return {
+    id: r.id,
+    email: r.email,
+    full_name: r.nama_lengkap ?? r.full_name ?? '',
+    role: r.role,
+    status: r.status,
+    nip_nis: r.nip_nis,
+    avatar_url: r.foto_profil ?? r.avatar_url,
+    created_at: r.created_at,
+  } as User;
 };
 
 export const updateUser = async (id: string, updates: Partial<User>) => {
-  const { error } = await supabase.from('profiles').update(updates).eq('id', id);
-  if (error) throw error;
+  const payload: Record<string, unknown> = {};
+  if (updates.full_name !== undefined) {
+    payload.nama_lengkap = updates.full_name;
+    payload.full_name = updates.full_name;
+  }
+  if (updates.email !== undefined) payload.email = updates.email;
+  if (updates.role !== undefined) payload.role = updates.role;
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.nip_nis !== undefined) payload.nip_nis = updates.nip_nis;
+  await adminUpdate('profiles', id, payload);
 };
 
 export const updateUserRole = async (id: string, role: string) => {
@@ -83,48 +109,34 @@ export const updateUserRole = async (id: string, role: string) => {
 };
 
 export const logActivity = async (user_id: string, aksi: string, modul?: string, entitas?: string, entitas_id?: string, detail?: Record<string, unknown>, ip_address?: string) => {
-  const { error } = await supabase.from('activity_log').insert({
-    user_id,
-    aksi,
-    modul,
-    entitas,
-    entitas_id,
-    detail,
-    ip_address
+  await adminCreate('log', {
+    user_id, aksi, modul, entitas, entitas_id,
+    detail: detail ? JSON.stringify(detail) : '',
   });
-  if (error) throw error;
 };
 
 // ==================== KELAS ====================
 export const fetchKelas = async (tingkat?: number) => {
-  let query = supabase.from('classes').select('*');
-  if (tingkat) query = query.eq('grade', tingkat);
-  const { data, error } = await query.order('name', { ascending: true });
-  if (error) throw error;
-  return data as Kelas[];
+  const rows = await adminList<Kelas>('classes');
+  const list = (rows || []).filter((k) => !tingkat || k.grade === tingkat);
+  return list.sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const fetchKelasById = async (id: string) => {
-  const { data, error } = await supabase.from('classes').select('*').eq('id', id).single();
-  if (error) throw error;
-  return data as Kelas;
+  const rows = await adminList<Kelas>('classes');
+  const k = (rows || []).find((x) => x.id === id);
+  if (!k) throw new Error('Kelas tidak ditemukan');
+  return k;
 };
 
-export const createKelas = async (kelas: Omit<Kelas, 'id' | 'created_at'>) => {
-  const { data, error } = await supabase.from('classes').insert(kelas).select().single();
-  if (error) throw error;
-  return data as Kelas;
-};
+export const createKelas = async (kelas: Omit<Kelas, 'id' | 'created_at'>) =>
+  adminCreate<Kelas>('classes', kelas);
 
-export const updateKelas = async (id: string, updates: Partial<Kelas>) => {
-  const { error } = await supabase.from('classes').update(updates).eq('id', id);
-  if (error) throw error;
-};
+export const updateKelas = async (id: string, updates: Partial<Kelas>) =>
+  adminUpdate('classes', id, updates);
 
-export const deleteKelas = async (id: string) => {
-  const { error } = await supabase.from('classes').delete().eq('id', id);
-  if (error) throw error;
-};
+export const deleteKelas = async (id: string) =>
+  adminDelete('classes', id);
 
 // Mapping helper for offerings shape (shared with guruOfferings)
 export const fromPengampu = (p: Pengampu & { guru?: User; mapel?: Subject; kelas?: Kelas }): {
@@ -153,36 +165,29 @@ export const guruOfferings = async (guruId: string) => {
 
 // ==================== SUBJECTS (MATA PELAJARAN) ====================
 export const fetchMapel = async (category?: string) => {
-  let query = supabase.from('subjects').select('*');
-  if (category) query = query.eq('category', category);
-  const { data, error } = await query.order('name', { ascending: true });
-  if (error) throw error;
-  return data as Subject[];
+  const rows = await adminList<Subject>('mapel');
+  const list = (rows || []).filter((m) => !category || m.category === category);
+  return list.sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const fetchMapelById = async (id: string) => {
-  const { data, error } = await supabase.from('subjects').select('*').eq('id', id).single();
-  if (error) throw error;
-  return data as Subject;
+  const rows = await adminList<Subject>('mapel');
+  const m = (rows || []).find((x) => x.id === id);
+  if (!m) throw new Error('Mapel tidak ditemukan');
+  return m;
 };
 
-export const createMapel = async (mapel: Omit<Subject, 'id' | 'created_at'>) => {
-  const { data, error } = await supabase.from('subjects').insert(mapel).select().single();
-  if (error) throw error;
-  return data as Subject;
-};
+export const createMapel = async (mapel: Omit<Subject, 'id' | 'created_at'>) =>
+  adminCreate<Subject>('mapel', mapel);
 
-export const updateMapel = async (id: string, updates: Partial<Subject>) => {
-  const { error } = await supabase.from('subjects').update(updates).eq('id', id);
-  if (error) throw error;
-};
+export const updateMapel = async (id: string, updates: Partial<Subject>) =>
+  adminUpdate('mapel', id, updates);
 
-export const deleteMapel = async (id: string) => {
-  const { error } = await supabase.from('subjects').delete().eq('id', id);
-  if (error) throw error;
-};
+export const deleteMapel = async (id: string) =>
+  adminDelete('mapel', id);
 
 // ==================== PENGAMPU (PENUGASAN GURU) ====================
+// TODO: butuh endpoint agregasi (join guru/mapel/kelas). Sementara tetap Supabase.
 export const fetchPengampu = async (kelasId?: string, guruId?: string) => {
   let query = supabase
     .from('pengampu')
@@ -199,23 +204,17 @@ export const fetchPengampu = async (kelasId?: string, guruId?: string) => {
   return data as (Pengampu & { guru?: User; mapel?: Subject; kelas?: Kelas })[];
 };
 
-export const createPengampu = async (pengampu: Omit<Pengampu, 'id_pengampu' | 'created_at'>) => {
-  const { data, error } = await supabase.from('pengampu').insert(pengampu).select().single();
-  if (error) throw error;
-  return data as Pengampu;
-};
+export const createPengampu = async (pengampu: Omit<Pengampu, 'id_pengampu' | 'created_at'>) =>
+  adminCreate<Pengampu>('pengampu', pengampu);
 
-export const updatePengampu = async (id: string, updates: Partial<Pengampu>) => {
-  const { error } = await supabase.from('pengampu').update(updates).eq('id_pengampu', id);
-  if (error) throw error;
-};
+export const updatePengampu = async (id: string, updates: Partial<Pengampu>) =>
+  adminUpdate('pengampu', id, updates);
 
-export const deletePengampu = async (id: string) => {
-  const { error } = await supabase.from('pengampu').delete().eq('id_pengampu', id);
-  if (error) throw error;
-};
+export const deletePengampu = async (id: string) =>
+  adminDelete('pengampu', id);
 
 // ==================== SISWA KELAS ====================
+// TODO: butuh endpoint agregasi. Sementara tetap Supabase.
 export const fetchSiswaKelas = async (kelasId?: string) => {
   let query = supabase
     .from('siswa_kelas')
@@ -245,27 +244,21 @@ export const getSiswaByKelas = async (kelasId: string) => {
 
 // ==================== JURUSAN (dari classes.major) ====================
 export const fetchJurusan = async () => {
-  const { data, error } = await supabase.from('jurusan').select('*').order('kode');
-  if (error) throw error;
-  return data;
+  const rows = await adminList<any>('jurusan');
+  return (rows || []).sort((a, b) => (a.kode || '').localeCompare(b.kode || ''));
 };
 
-export const createJurusan = async (jurusan: any) => {
-  const { data, error } = await supabase.from('jurusan').insert(jurusan).select().single();
-  if (error) throw error;
-  return data;
-};
+export const createJurusan = async (jurusan: any) =>
+  adminCreate('jurusan', jurusan);
 
-export const updateJurusan = async (id: string, updates: any) => {
-  const { error } = await supabase.from('jurusan').update(updates).eq('id', id);
-  if (error) throw error;
-};
+export const updateJurusan = async (id: string, updates: any) =>
+  adminUpdate('jurusan', id, updates);
 
-export const deleteJurusan = async (id: string) => {
-  const { error } = await supabase.from('jurusan').delete().eq('id', id);
-  if (error) throw error;
-};
+export const deleteJurusan = async (id: string) =>
+  adminDelete('jurusan', id);
 
+// TODO: create siswa/guru butuh alur pembuatan profile + siswa/guru atomik.
+// Sementara tetap Supabase sampai endpoint backend tersedia.
 export const createSiswa = async (siswa: any) => {
   const { data: user, error: e1 } = await supabase.from('profiles').insert({
     full_name: siswa.nama,
@@ -301,10 +294,8 @@ export const updateSiswa = async (id: string, siswa: any) => {
   if (e2) throw e2;
 };
 
-export const deleteUser = async (id: string) => {
-  const { error } = await supabase.from('profiles').delete().eq('id', id);
-  if (error) throw error;
-};
+export const deleteUser = async (id: string) =>
+  adminDelete('profiles', id);
 
 export const createGuru = async (guru: any) => {
   const { data, error } = await supabase.from('profiles').insert({
@@ -346,17 +337,12 @@ export const fromPengampuToOffering = (p: Pengampu & { guru?: User; mapel?: Subj
 });
 
 export const fetchStats = async () => {
-  const [siswa, guru, kelas, mapel] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'siswa'),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'guru'),
-    supabase.from('classes').select('*', { count: 'exact', head: true }),
-    supabase.from('subjects').select('*', { count: 'exact', head: true })
-  ]);
+  const d = await adminGet<any>('dashboard').catch(() => null);
   return {
-    siswa: siswa.count || 0,
-    guru: guru.count || 0,
-    kelas: kelas.count || 0,
-    mapel: mapel.count || 0
+    siswa: d?.total_siswa ?? 0,
+    guru: d?.total_guru ?? 0,
+    kelas: d?.total_classes ?? 0,
+    mapel: d?.total_subjects ?? 0,
   };
 };
 

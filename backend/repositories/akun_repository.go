@@ -43,7 +43,7 @@ func NewAkunRepository(db *DB, supabaseURL, serviceKey string) AkunRepository {
 
 func (r *akunRepo) GetProfile(ctx context.Context, id string) (map[string]interface{}, error) {
 	rows, err := r.db.List(ctx,
-		"SELECT id, full_name, email, role, status, nip_nis FROM profiles WHERE id = $1", id)
+		"SELECT id, nama_lengkap AS full_name, email, role, status, nip_nis, foto_profil, created_at FROM profiles WHERE id = $1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (r *akunRepo) GetProfile(ctx context.Context, id string) (map[string]interf
 }
 
 func (r *akunRepo) ListProfiles(ctx context.Context, role string) ([]map[string]interface{}, error) {
-	query := "SELECT id, full_name, email, role, status, nip_nis FROM profiles"
+	query := "SELECT id, nama_lengkap AS full_name, email, role, status, nip_nis, foto_profil, created_at FROM profiles"
 	if role != "" {
 		query += " WHERE role = $1"
 		return r.db.List(ctx, query, role)
@@ -64,7 +64,7 @@ func (r *akunRepo) ListProfiles(ctx context.Context, role string) ([]map[string]
 
 func (r *akunRepo) CreateProfile(ctx context.Context, payload models.CreateProfilePayload) (map[string]interface{}, error) {
 	err := r.db.Exec(ctx,
-		"INSERT INTO profiles (full_name, email, role, status, nip_nis) VALUES ($1, $2, $3, $4, $5)",
+		"INSERT INTO profiles (nama_lengkap, email, role, status, nip_nis, username) VALUES ($1, $2, $3, $4, $5, split_part($2, '@', 1))",
 		payload.FullName, payload.Email, payload.Role, payload.Status, payload.NipNis)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (r *akunRepo) CreateProfile(ctx context.Context, payload models.CreateProfi
 
 func (r *akunRepo) UpdateProfile(ctx context.Context, id string, payload models.UpdateProfilePayload) (map[string]interface{}, error) {
 	err := r.db.Exec(ctx,
-		"UPDATE profiles SET full_name = $1, email = $2, role = $3, status = $4, nip_nis = $5 WHERE id = $6",
+		"UPDATE profiles SET nama_lengkap = $1, email = $2, role = $3, status = $4, nip_nis = $5 WHERE id = $6",
 		payload.FullName, payload.Email, payload.Role, payload.Status, payload.NipNis, id)
 	if err != nil {
 		return nil, err
@@ -161,5 +161,31 @@ func (r *akunRepo) CreateAuthUser(ctx context.Context, payload models.CreateUser
 
 func (r *akunRepo) ResetPassword(ctx context.Context, id, password string) error {
 	_, err := r.do(ctx, http.MethodPut, "/auth/v1/admin/users/"+id, map[string]interface{}{"password": password})
+	return err
+}
+
+// CreateLinkedProfile menautkan user Auth baru ke tabel siswa atau guru.
+func (r *akunRepo) CreateLinkedProfile(ctx context.Context, payload models.CreateLinkedProfilePayload) error {
+	switch payload.Kind {
+	case "siswa":
+		if strings.TrimSpace(payload.Nis) == "" {
+			return fmt.Errorf("nis wajib diisi")
+		}
+		return r.db.Exec(ctx,
+			"INSERT INTO siswa (profile_id, nis, kelas_id, jenis_kelamin, status) VALUES ($1, $2, $3, $4, $5)",
+			payload.ProfileID, payload.Nis, nullable(payload.KelasID), nullable(payload.JenisKelamin), nullable(payload.Status))
+	case "guru":
+		return r.db.Exec(ctx,
+			"INSERT INTO guru (profile_id, nip, status) VALUES ($1, $2, $3)",
+			payload.ProfileID, nullable(payload.Nip), nullable(payload.Status))
+	default:
+		return fmt.Errorf("jenis profil tidak dikenal: %s", payload.Kind)
+	}
+}
+
+// DeleteAuthUser menghapus user Supabase Auth. Baris profile ikut terhapus
+// melalui ON DELETE CASCADE di database.
+func (r *akunRepo) DeleteAuthUser(ctx context.Context, id string) error {
+	_, err := r.do(ctx, http.MethodDelete, "/auth/v1/admin/users/"+id, nil)
 	return err
 }
