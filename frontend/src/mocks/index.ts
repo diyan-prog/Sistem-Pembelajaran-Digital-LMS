@@ -343,12 +343,5 @@ export const mediaFiles = [
   { id: 'f7', nama: 'Video: Responsive Design', tipe: 'youtube', ukuran: 'Tautan', tgl: '23 Okt 2026' }, { id: 'f8', nama: 'Mockup-Landing-Page.png', tipe: 'gambar', ukuran: '1,3 MB', tgl: '24 Okt 2026' },
   { id: 'f9', nama: 'Soal-Latihan-PHP.pdf', tipe: 'dokumen', ukuran: '980 KB', tgl: '26 Okt 2026' },
 ]
-export const ROLE_ORDER = ['Siswa', 'Guru', 'Wali Kelas', 'Kepala Sekolah', 'Tata Usaha']
-export const permissions = [
-  ['Lihat materi & tugas', true, true, true, true, true], ['Kumpulkan tugas & kuis', true, false, false, false, false], ['Kelola materi', false, true, false, false, true],
-  ['Presensi manual', false, true, false, false, false], ['Input nilai', false, true, false, false, false], ['Lihat rekap kelas', false, true, true, true, true],
-  ['Lihat statistik sekolah', false, false, false, true, true], ['Kelola data master', false, false, false, false, true], ['Kelola pengguna', false, false, false, false, true],
-]
-
 export const seedStat = (sid: string, n: number, hadirPct: number) => { const r = rng(Number(sid.slice(1)) * 53 + n * 7)(); return r < hadirPct / 100 ? 'H' : r < hadirPct / 100 + (1 - hadirPct / 100) * 0.4 ? 'I' : r < hadirPct / 100 + (1 - hadirPct / 100) * 0.75 ? 'S' : 'A' }
 export const nilaiKelas = (kid: string, off: string) => studentsOf(kid).map((s, i) => { const r = rng(Number(s.id.slice(1)) * 3 + off.length + i); const j = (b: number, w: number) => Math.min(100, Math.max(45, Math.round(b + (r() - 0.5) * w))); const tugas = j(s.rata, 20), kuis = j(s.rata, 24), uts = j(s.rata, 20), uas = j(s.rata - 2, 24); return { id: s.id, siswa: s, tugas, kuis, uts, uas, akhir: Math.round(tugas * 0.3 + kuis * 0.2 + uts * 0.3 + uas * 0.2) } })
