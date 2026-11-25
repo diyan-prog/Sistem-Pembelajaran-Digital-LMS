@@ -19,11 +19,15 @@ export function Login() {
         if (profile) {
           const dbRole = profile.role;
           r = toRole(dbRole);
+          localStorage.removeItem('spd-role');
+          localStorage.removeItem('spd-user');
           login(r, profile);
-          nav(homePath(r));
+          nav(homePath(r), { replace: true });
         } else {
+          localStorage.removeItem('spd-role');
+          localStorage.removeItem('spd-user');
           login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
-          nav(homePath('tu'));
+          nav(homePath('tu'), { replace: true });
         }
       }
     };
