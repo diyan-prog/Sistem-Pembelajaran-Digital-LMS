@@ -1,40 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/layouts';
-import { ROLES, toRole, homePath, type Role } from '@/lib/roles';
+import { resolveRole, homePath, type Role } from '@/lib/roles';
 import { useApp } from '@/context';
 import { supabase } from '@/lib/supabase';
-import { getMeGo } from '@/services/api-go';
+import { getMeGo, type MeGo } from '@/services/api-go';
+
+/** Data minimal bila backend belum mengembalikan profil lengkap. */
+function profileFromSession(session: any, role: Role) {
+  const meta = session?.user?.user_metadata ?? {};
+  return {
+    id: session.user.id,
+    full_name: meta.nama_lengkap ?? session.user.email ?? 'Pengguna',
+    email: session.user.email ?? null,
+    role,
+  };
+}
 
 export function Login() {
   const { login } = useApp();
   const nav = useNavigate();
+  const checkedRef = useRef(false);
 
   useEffect(() => {
+    if (checkedRef.current) return;
+    checkedRef.current = true;
     const handleAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        let profile: any = null;
-        try {
-          profile = await getMeGo(session.access_token);
-        } catch {
-          // Fallback ke data minimal bila backend belum merespons.
-        }
-        let r: Role;
-        if (profile) {
-          r = toRole(profile.role);
-          localStorage.removeItem('spd-role');
-          localStorage.removeItem('spd-user');
-          login(r, profile);
-          nav(homePath(r), { replace: true });
-        } else {
-          localStorage.removeItem('spd-role');
-          localStorage.removeItem('spd-user');
-          login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
-          nav(homePath('tu'), { replace: true });
-        }
+      if (!session) return;
+      let profile: MeGo | null = null;
+      try {
+        profile = await getMeGo(session.access_token);
+      } catch {
+        // Fallback ke metadata sesi bila backend belum merespons.
       }
+      const r = resolveRole(profile, session.user);
+      if (!r) return; // biarkan form login tampil; jangan menebak role
+      login(r, profile ? { ...profile, role: r } : profileFromSession(session, r));
+      nav(homePath(r), { replace: true });
     };
     handleAuth();
   }, [login, nav]);
@@ -63,21 +67,19 @@ export function Login() {
       if (authError || !authData.user) throw new Error('Username atau password salah');
 
       // 2. Ambil profil lengkap dari backend Go agar role dan nama sinkron dengan context
-      let profile: any = null;
+      let profile: MeGo | null = null;
       try {
         profile = await getMeGo(authData.session?.access_token);
       } catch {
-        // Fallback ke data minimal bila backend belum merespons.
+        // Fallback ke metadata sesi bila backend belum merespons.
       }
 
-      let r: Role;
-      if (profile) {
-        r = toRole(profile.role);
-        login(r, profile);
-      } else {
-        r = 'tu';
-        login(r, { id: authData.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
+      const r = resolveRole(profile, authData.user);
+      if (!r) {
+        await supabase.auth.signOut();
+        throw new Error('Akun ini belum memiliki peran. Hubungi Tata Usaha.');
       }
+      login(r, profile ? { ...profile, role: r } : profileFromSession(authData.session, r));
       setIsLoading(false);
       nav(homePath(r), { replace: true });
     } catch (err: any) {

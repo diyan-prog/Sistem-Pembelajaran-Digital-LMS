@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { notifGuru, notifUmum, notifikasi } from '@/mocks'
-import { ROLES, toRole, type Role } from '@/lib/roles'
+import { ROLES, resolveRole, toRole, type Role } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
 import { getMeGo } from '@/services/api-go'
 
@@ -36,27 +36,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [conf, setConf] = useState<ConfirmT>(null)
   const [notifs, setNotifs] = useState(() => notifFor(role))
 
-  const login = (r: Role, data: any) => {
+  const login = useCallback((r: Role, data: any) => {
     localStorage.setItem('spd-role', r);
     localStorage.setItem('spd-user', JSON.stringify(data));
     setRole(r);
     setUserData(data);
     setNotifs(notifFor(r));
-  }
+  }, [])
 
   const handleSession = useCallback(async (session: any) => {
     let profile: any = null;
     try {
       profile = await getMeGo(session?.access_token);
     } catch {
-      // Backend belum tersedia: pakai data minimal dari sesi Supabase Auth.
+      // Backend belum tersedia: tetap coba role dari metadata sesi Supabase.
+    }
+    const r = resolveRole(profile, session?.user);
+    if (!r) {
+      // Jangan menebak role. Halaman login yang menampilkan pesan ke pengguna.
+      return;
     }
     if (profile) {
-      login(toRole(profile.role), profile);
-    } else {
-      login('tu', { id: session.user.id, full_name: 'Tata Usaha / Admin', role: 'tu' });
+      login(r, { ...profile, role: r });
+      return;
     }
-  }, []);
+    const meta = session?.user?.user_metadata ?? {};
+    login(r, {
+      id: session.user.id,
+      full_name: meta.nama_lengkap ?? session.user.email ?? 'Pengguna',
+      email: session.user.email ?? null,
+      role: r,
+    });
+  }, [login]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

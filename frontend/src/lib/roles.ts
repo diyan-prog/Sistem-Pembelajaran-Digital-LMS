@@ -8,7 +8,7 @@ export type Menu = { label: string; icon: LucideIcon; to: string }
 export function toRole(value: unknown): Role {
   const s = String(value ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-')
   if (s === 'tu' || s === 'admin' || s === 'super-admin' || s === 'tata-usaha') return 'tu'
-  if (s.includes('kepala')) return 'kepsek'
+  if (s === 'kepsek' || s === 'kepala-sekolah' || s.includes('kepala')) return 'kepsek'
   if (s.includes('wali')) return 'wali'
   if (s.includes('guru')) return 'guru'
   return 'siswa'
@@ -16,6 +16,22 @@ export function toRole(value: unknown): Role {
 
 export function homePath(role: Role): string {
   return ROLES[role].base + (role === 'tu' ? '/dashboard' : '/beranda')
+}
+
+/**
+ * Menentukan role dari profil backend, lalu metadata user Supabase Auth.
+ * Mengembalikan null bila tidak ada sumber role yang valid, agar pemanggil
+ * tidak menebak role (dulu default ke `tu` sehingga semua user salah arah).
+ */
+export function resolveRole(profile: unknown, authUser?: unknown): Role | null {
+  const p = profile as Record<string, unknown> | null | undefined
+  const u = authUser as { user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> } | null | undefined
+  const candidates = [p?.role, u?.user_metadata?.role, u?.app_metadata?.role]
+  for (const c of candidates) {
+    const s = String(c ?? '').trim()
+    if (s) return toRole(s)
+  }
+  return null
 }
 
 export const ROLES: Record<Role, { label: string; chip: string; base: string; nama: string; sub: string; menus: Menu[] }> = {
