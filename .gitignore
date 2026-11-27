@@ -21,3 +21,7 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Supabase CLI local state (jangan di-commit)
+/supabase/.temp/
+

@@ -99,7 +99,7 @@ const mapMateri = (row: Row): MateriItem => ({
   id: str(row.id_materi),
   judul: str(row.judul),
   tipe: tipeMateri(row),
-  ukuran: undefined,
+  ukuran: str(row.ukuran) || undefined,
   tanggal: str(row.tanggal_upload) ? fmtTglPendek(new Date(str(row.tanggal_upload))) : '',
   yt: str(row.link_video) || undefined,
   ext: extMateri(row),
@@ -140,18 +140,38 @@ export const sesiOf = (pengampuId: string): Sesi[] =>
     const statusByTanggal = new Map(presensi.map((p) => [str(p.tanggal).slice(0, 10), lower(p.status)]))
     const rows = snap.presensi_sesi.filter((s) => str(s.pengampu_id) === pengampuId)
     const label = (v: string): Sesi['status'] => (v === 'hadir' ? 'Hadir' : v === 'izin' ? 'Izin' : v === 'sakit' ? 'Sakit' : v === 'alpa' ? 'Alpa' : 'Hadir')
-    return rows
-      .slice()
-      .sort((a, b) => Number(a.pertemuan_ke) - Number(b.pertemuan_ke))
-      .map((s) => {
-        const tgl = str(s.tanggal) ? new Date(str(s.tanggal)) : new Date()
-        const p = pertemuanById.get(str(s.topik)) ?? snap.pertemuan.find((x) => str(x.id_pengampu) === pengampuId && Number(x.no_pertemuan) === Number(s.pertemuan_ke))
+    if (rows.length) {
+      return rows
+        .slice()
+        .sort((a, b) => Number(a.pertemuan_ke) - Number(b.pertemuan_ke))
+        .map((s) => {
+          const tgl = str(s.tanggal) ? new Date(str(s.tanggal)) : new Date()
+          const p = pertemuanById.get(str(s.topik)) ?? snap.pertemuan.find((x) => str(x.id_pengampu) === pengampuId && Number(x.no_pertemuan) === Number(s.pertemuan_ke))
+          return {
+            no: Number(s.pertemuan_ke) || 0,
+            tanggal: tgl,
+            jam: str(s.jam),
+            materi: str(p?.judul ?? s.topik),
+            status: label(statusByTanggal.get(str(s.tanggal).slice(0, 10)) ?? 'hadir'),
+            tgl: fmtTglPendek(tgl),
+          }
+        })
+    }
+    // Tabel presensi_sesi belum terisi: pakai pertemuan yang benar-benar ada di
+    // database agar daftar sesi dan rekap tidak kosong.
+    const slot = getSnapshot().jadwal.find((j) => str(j.penugasan_id) === pengampuId)
+    const jam = slot && slot.jam_mulai ? `${str(slot.jam_mulai).slice(0, 5)}-${str(slot.jam_selesai).slice(0, 5)}` : '-'
+    return snap.pertemuan
+      .filter((p) => str(p.id_pengampu) === pengampuId)
+      .sort((a, b) => Number(a.no_pertemuan) - Number(b.no_pertemuan))
+      .map((p) => {
+        const tgl = str(p.tanggal) ? new Date(str(p.tanggal)) : new Date()
         return {
-          no: Number(s.pertemuan_ke) || 0,
+          no: Number(p.no_pertemuan) || 0,
           tanggal: tgl,
-          jam: str(s.jam),
-          materi: str(p?.judul ?? s.topik),
-          status: label(statusByTanggal.get(str(s.tanggal).slice(0, 10)) ?? 'hadir'),
+          jam,
+          materi: str(p.judul),
+          status: label(statusByTanggal.get(str(p.tanggal).slice(0, 10)) ?? 'hadir'),
           tgl: fmtTglPendek(tgl),
         }
       })

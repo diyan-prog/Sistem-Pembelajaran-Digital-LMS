@@ -3,18 +3,20 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Bold, Eye, Italic, List as ListIcon, ListOrdered, Pencil, Plus, Save, Send, Trash2 } from 'lucide-react'
 import { Btn, Card, Chips, DataTable, Dropzone, Field, Input, PageHeader, Progress, StatusBadge, Toggle, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { fmtBatas, offeringById, offeringTitle, tugas, tugasById } from '@/lib/data'
+import { fmtBatas, offeringById, offeringTitle, tugas, tugasById, useData } from '@/lib/data'
 import { mine } from './common'
 
 export function TugasListGuru({ offId }: { offId?: string }) {
-  const { toast, confirm } = useApp(); const nav = useNavigate(); const [items, setItems] = useState(() => tugas.filter((t) => (offId ? t.off === offId : mine().some((o) => o.id === t.off))))
+  useData()
+  const { toast, confirm } = useApp(); const nav = useNavigate(); const [removed, setRemoved] = useState<string[]>([])
+  const items = tugas.filter((t) => (offId ? t.off === offId : mine().some((o) => o.id === t.off)) && !removed.includes(t.id))
   const [st, setSt] = useState('Semua')
   const rows = items.filter((t) => st === 'Semua' || t.gStatus === st)
   return (
     <div className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><Chips value={st} onChange={setSt} options={['Semua', 'Draft', 'Aktif', 'Ditutup'].map((k) => ({ k, l: k, n: k === 'Semua' ? items.length : items.filter((t) => t.gStatus === k).length }))} /><Btn icon={<Plus size={18} />} to={`/guru/tugas/baru${offId ? `?off=${offId}` : ''}`}>Buat Tugas</Btn></div>
       <DataTable rows={rows} pageSize={10} searchText={(t) => t.judul} searchPlaceholder="Cari judul tugas" onRow={(t) => nav(`/guru/penilaian?tugas=${t.id}`)}
         cols={[{ key: 'judul', header: 'Judul Tugas', sort: (t) => t.judul, render: (t) => <div><b>{t.judul}</b><div className="text-xs text-muted uppercase">{offeringTitle(offeringById(t.off))}</div></div> }, { key: 'batas', header: 'Batas', sort: (t) => t.batas, render: (t) => <span className="text-sm">{fmtBatas(t.batas)}</span> }, { key: 'gStatus', header: 'Status', render: (t) => <StatusBadge s={t.gStatus} /> }, { key: 'terkumpul', header: 'Terkumpul', sort: (t) => t.terkumpul, render: (t) => <div className="w-36"><div className="text-xs font-semibold mb-1">{t.terkumpul} / 25 siswa</div><Progress value={(t.terkumpul / 25) * 100} tone="green" /></div> }]}
-        actions={(t) => [{ l: 'Lihat Pengumpulan', icon: <Eye size={16} />, onClick: () => nav(`/guru/penilaian?tugas=${t.id}`) }, { l: 'Edit', icon: <Pencil size={16} />, onClick: () => nav(`/guru/tugas/${t.id}/edit`) }, { l: 'Hapus', icon: <Trash2 size={16} />, danger: true, onClick: () => confirm({ title: 'Hapus Tugas?', message: `Tugas "${t.judul}" beserta seluruh pengumpulan akan dihapus.`, danger: true, onOk: () => { setItems(items.filter((x) => x.id !== t.id)); toast('Tugas berhasil dihapus') } }) }]} /></div>
+        actions={(t) => [{ l: 'Lihat Pengumpulan', icon: <Eye size={16} />, onClick: () => nav(`/guru/penilaian?tugas=${t.id}`) }, { l: 'Edit', icon: <Pencil size={16} />, onClick: () => nav(`/guru/tugas/${t.id}/edit`) }, { l: 'Hapus', icon: <Trash2 size={16} />, danger: true, onClick: () => confirm({ title: 'Hapus Tugas?', message: `Tugas "${t.judul}" beserta seluruh pengumpulan akan dihapus.`, danger: true, onOk: () => { setRemoved((r) => [...r, t.id]); toast('Tugas berhasil dihapus') } }) }]} /></div>
   )
 }
 export const TugasListPage = () => <div><PageHeader crumbs={useCrumbs({ l: 'Daftar Tugas' })} title="Daftar Tugas" subtitle="Semua tugas dari kelas yang Anda ampu" /><TugasListGuru /></div>

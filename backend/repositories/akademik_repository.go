@@ -42,7 +42,7 @@ var (
 		pilihan_c, pilihan_d, kunci_jawaban::text, poin, urutan FROM soal_kuis ORDER BY urutan`
 	queryHasil = `SELECT id_hasil::text, id_kuis::text, id_siswa::text, nilai, waktu_mulai,
 		waktu_selesai FROM hasil_kuis`
-	queryMateri = `SELECT id_materi::text, id_pengampu::text, judul, deskripsi, file_materi,
+	queryMateri = `SELECT id_materi::text, id_pengampu::text, id_pertemuan::text, judul, deskripsi, file_materi,
 		link_video, tanggal_upload FROM materi ORDER BY tanggal_upload DESC`
 	queryPertemuan = `SELECT id_pertemuan::text, id_pengampu::text, no_pertemuan, judul,
 		tanggal FROM pertemuan ORDER BY no_pertemuan`

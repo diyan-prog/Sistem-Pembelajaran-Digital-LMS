@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getMeGo } from '@/services/api-go'
 import { loadAkademik } from '@/services/bootstrap'
 import { clearSnapshot, useStore } from '@/lib/store'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 type ToastT = { id: number; msg: string; type: 'ok' | 'err' | 'info' | 'warn' }
 type ConfirmT = { title: string; message: string; okLabel?: string; danger?: boolean; onOk: () => void } | null
@@ -85,8 +86,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Jangan menebak role. Halaman login yang menampilkan pesan ke pengguna.
       return;
     }
-    // Muat data akademik ter-scope peran; kegagalan tidak memblokir login.
-    loadAkademik().catch(() => {});
+    // Muat data akademik ter-scope peran; kegagalan (mis. sesi kadang berakhir)
+    // harus terlihat jelas, bukan diam-diam dibiarkan membuat halaman kosong.
+    loadAkademik(true).catch((e) => {
+      const msg = e?.message ? String(e.message) : 'Tidak dapat memuat data'
+      toast(`Gagal memuat data akademik: ${msg}`, 'err')
+    });
     if (profile) {
       login(r, { ...profile, role: r });
       return;
@@ -148,7 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const icons = { ok: <CheckCircle2 className="text-ok" size={20} />, err: <XCircle className="text-danger" size={20} />, info: <Info className="text-accent" size={20} />, warn: <AlertTriangle className="text-warn" size={20} /> }
   return (
     <C.Provider value={{ role, userData, login, logout, toast, confirm: setConf, notifs, markRead: (id) => setNotifs((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))), markAll: () => setNotifs((n) => n.map((x) => ({ ...x, read: true }))), refreshUser }}>
-      {children}
+      <ErrorBoundary>{children}</ErrorBoundary>
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className="pop flex items-center gap-3 bg-white border border-line shadow-lift rounded-2xl pl-4 pr-3 py-3 min-w-[280px] max-w-sm">

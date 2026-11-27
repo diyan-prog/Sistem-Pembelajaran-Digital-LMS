@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
 import { Btn, Card, ClassCard, Empty, SearchBar, Select, Tabs, useTab } from '@/components/ui'
-import { archived, kelasById, myOfferings, subjectById, teacherById, useData } from '@/lib/data'
+import { archived, currentUserId, guruOfferings, kelasById, myKelasId, siswaOfferings, subjectById, teacherById, useData } from '@/lib/data'
 
 export function ClassBrowser({ mode, withFilter, to }: { mode: 'siswa' | 'guru'; withFilter?: boolean; to: string }) {
   useData()
   const [tab, setTab] = useTab('aktif', 'kelas'); const [q, setQ] = useState(''); const [sem, setSem] = useState('Semua'); const [kl, setKl] = useState('Semua')
-  const active = myOfferings()
-  const arch = archived
+  const uid = currentUserId()
+  const kelasId = myKelasId()
+  const active = mode === 'guru' ? guruOfferings(uid) : siswaOfferings(kelasId)
+  const arch = mode === 'guru'
+    ? archived.filter((o) => o.guru === uid || o.co.includes(uid))
+    : archived.filter((o) => o.kelasId === kelasId)
   const base = tab === 'aktif' ? active : arch
-  const list = useMemo(() => base.filter((o) => { const t = `${subjectById(o.subjectId).nama} ${o.kode} ${teacherById(o.guru).sapaan} ${o.co.map((c) => teacherById(c).sapaan).join(' ')}`.toLowerCase(); return t.includes(q.toLowerCase()) && (sem === 'Semua' || o.semester === sem) && (kl === 'Semua' || kelasById(o.kelasId).nama === kl) }), [base, q, sem, kl])
+  const list = useMemo(() => base.filter((o) => { const t = `${subjectById(o.subjectId).nama} ${o.kode} ${teacherById(o.guru).sapaan} ${o.co.map((c) => teacherById(c).sapaan).join(' ')}`.toLowerCase(); return t.includes(q.toLowerCase()) && (sem === 'Semua' || o.semester === sem) && (kl === 'Semua' || kelasById(o.kelasId).nama === kl) }), [active, arch, tab, q, sem, kl])
   const title = tab === 'aktif' ? 'Kelas Aktif' : 'Kelas Arsip'
   const semesters = [...new Set([...active, ...arch].map((o) => o.semester).filter(Boolean))]
   return (

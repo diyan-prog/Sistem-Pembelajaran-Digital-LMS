@@ -39,7 +39,16 @@ export function PresensiPick() {
 }
 export function PresensiList() {
   const { offId } = useParams(); const o = offeringById(offId!); const nav = useNavigate(); const { toast } = useApp(); const base = sesiOf(o.id)
-  const mk = (n: number, extra = 0) => { const tgl = base[n - 1]?.tanggal ?? addDays(TODAY, (n - o.done - 1) * 7); const seed = (n * 7) % 5; const h = 25 - seed - (n % 3 === 0 ? 1 : 0); const i = n % 4 === 0 ? 1 : 0; const sk = n % 5 === 0 ? 1 : 0; const al = 25 - h - i - sk; return { id: n, n, tgl, tanggal: fmtTgl(tgl), jam: `${o.jadwal[0].mulai} - ${o.jadwal[0].selesai}`, materi: base[n - 1]?.materi ?? ['Pengantar Bab Baru', 'Praktik Terbimbing', 'Studi Kasus', 'Evaluasi Bab'][(n + extra) % 4], h, i, s: sk, a: al, status: n <= o.done ? 'Selesai' : n === o.done + 1 ? 'Berlangsung' : 'Terjadwal' } }
+  const mk = (n: number, extra = 0) => { 
+    const tgl = base[n - 1]?.tanggal ?? addDays(TODAY, (n - o.done - 1) * 7); 
+    const slot = o.jadwal?.[0] ?? { mulai: '-', selesai: '-', ruang: '-' }; 
+    const seed = (n * 7) % 5; 
+    const h = 25 - seed - (n % 3 === 0 ? 1 : 0); 
+    const i = n % 4 === 0 ? 1 : 0; 
+    const sk = n % 5 === 0 ? 1 : 0; 
+    const al = 25 - h - i - sk; 
+    return { id: n, n, tgl, tanggal: fmtTgl(tgl), jam: `${slot.mulai} - ${slot.selesai}`, materi: base[n - 1]?.materi ?? ['Pengantar Bab Baru', 'Praktik Terbimbing', 'Studi Kasus', 'Evaluasi Bab'][(n + extra) % 4], h, i, s: sk, a: al, status: n <= o.done ? 'Selesai' : n === o.done + 1 ? 'Berlangsung' : 'Terjadwal' }
+  }
   const [extra, setExtra] = useState(0); const rows = useMemo(() => Array.from({ length: o.done + 4 + extra }, (_, k) => mk(k + 1)).reverse(), [o.id, extra])
   return (
     <div><PageHeader crumbs={useCrumbs({ l: 'Presensi', to: '/guru/presensi' }, { l: kelasById(o.kelasId).nama })} title={`Daftar Pertemuan: ${subjectById(o.subjectId).nama}`} subtitle={`${offeringTitle(o)} â€¢ ${o.done} dari ${o.total} sesi`} actions={<><Btn variant="outline" to={`/guru/presensi/${o.id}/rekap`} icon={<FileSpreadsheet size={18} />}>Rekap Presensi</Btn><Btn variant="outline" icon={<Plus size={18} />} onClick={() => { setExtra(extra + 1); toast('Pertemuan baru berhasil dibuat') }}>Buat Pertemuan</Btn><Btn icon={<QrCode size={18} />} to={`/guru/presensi/${o.id}/sesi/${o.done + 1}`}>Mulai Presensi</Btn></>} />
@@ -50,7 +59,7 @@ export function PresensiList() {
 
 const code = () => `PWB-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 export function PresensiSesi() {
-  const { offId, n } = useParams(); const o = offeringById(offId!); const { toast, confirm } = useApp(); const nav = useNavigate(); const ss = studentsOf(o.kelasId); const slot = o.jadwal[0]
+  const { offId, n } = useParams(); const o = offeringById(offId!); const { toast, confirm } = useApp(); const nav = useNavigate(); const ss = studentsOf(o.kelasId); const slot = o.jadwal?.[0] ?? { mulai: '-', selesai: '-', ruang: '-' }
   const [st, setSt] = useState<Record<string, string>>({}); const [ket, setKet] = useState<Record<string, string>>({}); const [q, setQ] = useState(''); const [c, setC] = useState(code()); const [left, setLeft] = useState(60); const [full, setFull] = useState(false); const [busy, setBusy] = useState(false)
   useEffect(() => { const t = setInterval(() => setLeft((l) => (l <= 1 ? (setC(code()), 60) : l - 1)), 1000); return () => clearInterval(t) }, [])
   const cnt = (k: string) => ss.filter((s) => st[s.id] === k).length; const belum = ss.filter((s) => !st[s.id]).length

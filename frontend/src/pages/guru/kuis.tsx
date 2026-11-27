@@ -3,14 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Eye, GripVertical, Library, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { Badge, Btn, Card, CardTitle, DataTable, Empty, Input, Modal, PageHeader, Select, StatusBadge, Textarea, Toggle, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { bankSoal, fmtBatas, kuis, kuisSoal, offeringById, offeringTitle } from '@/lib/data'
+import { bankSoal, fmtBatas, kuis, kuisSoal, offeringById, offeringTitle, useData } from '@/lib/data'
 import { mine } from './common'
 
 export function KuisListGuru({ offId }: { offId?: string }) {
-  const { toast, confirm } = useApp(); const nav = useNavigate(); const [items, setItems] = useState(() => kuis.filter((k) => (offId ? k.off === offId : mine().some((o) => o.id === k.off))))
+  useData()
+  const { toast, confirm } = useApp(); const nav = useNavigate(); const [removed, setRemoved] = useState<string[]>([])
+  const items = kuis.filter((k) => (offId ? k.off === offId : mine().some((o) => o.id === k.off)) && !removed.includes(k.id))
   return <div className="space-y-4"><div className="flex justify-end"><Btn icon={<Plus size={18} />} to="/guru/kuis/baru">Buat Kuis</Btn></div>
     <DataTable rows={items} searchText={(k) => k.judul} searchPlaceholder="Cari judul kuis" onRow={(k) => nav(`/guru/kuis/${k.id}/hasil`)} cols={[{ key: 'judul', header: 'Judul Kuis', sort: (k) => k.judul, render: (k) => <div><b>{k.judul}</b><div className="text-xs text-muted uppercase">{offeringTitle(offeringById(k.off))}</div></div> }, { key: 'durasi', header: 'Durasi', sort: (k) => k.durasi, render: (k) => `${k.durasi} menit` }, { key: 'soal', header: 'Soal' }, { key: 'tutup', header: 'Ditutup', sort: (k) => k.tutup, render: (k) => fmtBatas(k.tutup) }, { key: 'gStatus', header: 'Status', render: (k) => <StatusBadge s={k.gStatus} /> }, { key: 'dikerjakan', header: 'Dikerjakan', render: (k) => `${k.dikerjakan} / 25` }]}
-      actions={(k) => [{ l: 'Lihat Hasil', icon: <Eye size={16} />, onClick: () => nav(`/guru/kuis/${k.id}/hasil`) }, { l: 'Edit', icon: <Pencil size={16} />, onClick: () => nav(`/guru/kuis/${k.id}/edit`) }, { l: 'Hapus', icon: <Trash2 size={16} />, danger: true, onClick: () => confirm({ title: 'Hapus Kuis?', message: `Kuis "${k.judul}" dan hasil pengerjaan akan dihapus.`, danger: true, onOk: () => { setItems(items.filter((x) => x.id !== k.id)); toast('Kuis berhasil dihapus') } }) }]} /></div>
+      actions={(k) => [{ l: 'Lihat Hasil', icon: <Eye size={16} />, onClick: () => nav(`/guru/kuis/${k.id}/hasil`) }, { l: 'Edit', icon: <Pencil size={16} />, onClick: () => nav(`/guru/kuis/${k.id}/edit`) }, { l: 'Hapus', icon: <Trash2 size={16} />, danger: true, onClick: () => confirm({ title: 'Hapus Kuis?', message: `Kuis "${k.judul}" dan hasil pengerjaan akan dihapus.`, danger: true, onOk: () => { setRemoved((r) => [...r, k.id]); toast('Kuis berhasil dihapus') } }) }]} /></div>
 }
 type QS = { id: string; q: string; opsi: string[]; kunci: number }
 export function KuisForm() {
