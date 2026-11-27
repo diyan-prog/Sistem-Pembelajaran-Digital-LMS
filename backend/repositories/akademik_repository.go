@@ -2,7 +2,8 @@ package repositories
 
 import (
 	"context"
-	"strings"
+
+	"classin/api/authz"
 )
 
 // AkademikRepository menyediakan satu snapshot data akademik yang sudah
@@ -144,7 +145,7 @@ func (r *AkademikRepository) Bootstrap(ctx context.Context, userID string) (map[
 		return nil, err
 	}
 
-	canonical := CanonicalRole(role)
+	canonical := authz.CanonicalRole(role)
 	kelasAkses := map[string]bool{}
 	siswaAkses := map[string]bool{}
 
@@ -240,7 +241,7 @@ func (r *AkademikRepository) Bootstrap(ctx context.Context, userID string) (map[
 	for _, p := range pengumuman {
 		targetRole := str(p["target_role"])
 		targetKelas := str(p["target_kelas_id"])
-		if targetRole != "" && !roleMatches(canonical, targetRole) {
+		if targetRole != "" && !authz.RoleMatches(canonical, targetRole) {
 			continue
 		}
 		if targetKelas != "" && !kelasAkses[targetKelas] {
@@ -330,13 +331,6 @@ func (r *AkademikRepository) Bootstrap(ctx context.Context, userID string) (map[
 	}, nil
 }
 
-// CanonicalRole menyeragamkan label role database menjadi snake_case.
-func CanonicalRole(role string) string {
-	s := strings.ToLower(strings.TrimSpace(role))
-	s = strings.ReplaceAll(s, " ", "_")
-	return s
-}
-
 func str(v interface{}) string {
 	if v == nil {
 		return ""
@@ -381,21 +375,4 @@ func keys(m map[string]bool) []string {
 		}
 	}
 	return out
-}
-
-func roleMatches(canonical, target string) bool {
-	t := CanonicalRole(target)
-	switch t {
-	case "guru", "guru_mapel":
-		return canonical == "guru_mapel" || canonical == "guru"
-	case "siswa":
-		return canonical == "siswa"
-	case "wali", "wali_kelas":
-		return canonical == "wali_kelas"
-	case "kepsek", "kepala_sekolah":
-		return canonical == "kepala_sekolah" || canonical == "kepsek"
-	case "tu", "tata_usaha":
-		return canonical == "tata_usaha" || canonical == "tu"
-	}
-	return t == canonical
 }

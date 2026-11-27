@@ -1,12 +1,16 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"classin/api/authz"
+	"classin/api/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -24,86 +28,107 @@ type identity struct {
 	role   string
 }
 
-// cacheToken menyimpan hasil verifikasi jarak jauh agar satu permintaan HTTP
-// tidak memanggil Supabase Auth berulang-ulang.
-const tokenTTL = 60 * time.Second
+// tokenTTL adalah masa simpan hasil verifikasi token agar satu sesi tidak
+// memanggil Supabase Auth pada setiap permintaan. Peran tidak ikut di-cache;
+// nilainya selalu dibaca dari tabel profiles supaya perubahan hak akses
+// langsung berlaku.
+const tokenTTL = 5 * time.Minute
 
 var (
 	cacheMu sync.Mutex
 	cache   = map[string]struct {
-		id   identity
-		exp  time.Time
-		last time.Time
+		userID string
+		exp    time.Time
 	}{}
 )
 
-// Auth memverifikasi bearer token Supabase.
+// Auth memverifikasi bearer token Supabase lalu menentukan peran aplikasi.
 //
-// Bila SUPABASE_JWT_SECRET berisi secret HMAC, token diverifikasi lokal tanpa
-// jaringan. Bila kosong (atau berisi URL JWKS pada proyek dengan kunci
-// asimetris), token diverifikasi ke Supabase Auth memakai service role key.
-func Auth() echo.MiddlewareFunc {
+// Verifikasi: bila SUPABASE_JWT_SECRET berisi secret HMAC, token divalidasi
+// lokal. Bila kosong (atau berisi URL JWKS), token divalidasi ke Supabase Auth
+// memakai service role key.
+//
+// Peran diambil berurutan: profiles.role (sumber utama), lalu
+// user_metadata.role, lalu app_metadata.role. Klaim Supabase seperti
+// "authenticated" diabaikan.
+func Auth(db *repositories.DB) echo.MiddlewareFunc {
 	secret := strings.TrimSpace(os.Getenv("SUPABASE_JWT_SECRET"))
-	if secret != "" && !strings.HasPrefix(secret, "http") {
-		return authHMAC([]byte(secret))
-	}
-	return authRemote()
-}
-
-func authHMAC(secret []byte) echo.MiddlewareFunc {
+	verify := verifier(secret)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			tokenStr, err := bearer(c)
 			if err != nil {
 				return unauthorized(c, err.Error())
 			}
-			claims := &Claims{}
-			token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
-				return secret, nil
-			}, jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}))
-			if err != nil || !token.Valid {
-				return unauthorized(c, "invalid token")
+			id, err := verify(tokenStr)
+			if err != nil {
+				return unauthorized(c, err.Error())
 			}
-			c.Set("user_id", claims.Sub)
-			c.Set("role", claims.Role)
+			role := profileRole(c.Request().Context(), db, id.userID)
+			if role == "" {
+				role = id.role
+			}
+			c.Set("user_id", id.userID)
+			c.Set("role", authz.CanonicalRole(role))
 			return next(c)
 		}
 	}
 }
 
-func authRemote() echo.MiddlewareFunc {
+// profileRole membaca peran dari tabel profiles.
+func profileRole(ctx context.Context, db *repositories.DB, userID string) string {
+	if db == nil || userID == "" {
+		return ""
+	}
+	row, err := db.One(ctx, `SELECT role::text FROM profiles WHERE id = $1::uuid`, userID)
+	if err != nil {
+		return ""
+	}
+	if raw, ok := row["role"].(string); ok {
+		return raw
+	}
+	return ""
+}
+
+// verifier mengembalikan fungsi verifikasi token sesuai konfigurasi.
+func verifier(secret string) func(string) (identity, error) {
+	if secret != "" && !strings.HasPrefix(secret, "http") {
+		return func(tokenStr string) (identity, error) { return verifyHMAC([]byte(secret), tokenStr) }
+	}
 	base := strings.TrimRight(os.Getenv("SUPABASE_URL"), "/")
 	apiKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
 	if apiKey == "" {
 		apiKey = os.Getenv("SUPABASE_ANON_KEY")
 	}
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			tokenStr, err := bearer(c)
-			if err != nil {
-				return unauthorized(c, err.Error())
-			}
-			if base == "" {
-				return unauthorized(c, "server belum dikonfigurasi: SUPABASE_URL kosong")
-			}
-			if id, ok := cacheGet(tokenStr); ok {
-				c.Set("user_id", id.userID)
-				c.Set("role", id.role)
-				return next(c)
-			}
-
-			id, err := lookupUser(client, base, apiKey, tokenStr)
-			if err != nil {
-				return unauthorized(c, err.Error())
-			}
-			cachePut(tokenStr, id)
-			c.Set("user_id", id.userID)
-			c.Set("role", id.role)
-			return next(c)
+	return func(tokenStr string) (identity, error) {
+		if base == "" {
+			return identity{}, simpleError("server belum dikonfigurasi: SUPABASE_URL kosong")
 		}
+		if id, ok := cacheGet(tokenStr); ok {
+			return id, nil
+		}
+		id, err := lookupUser(client, base, apiKey, tokenStr)
+		if err != nil {
+			return identity{}, err
+		}
+		cachePut(tokenStr, id)
+		return id, nil
 	}
+}
+
+func verifyHMAC(secret []byte, tokenStr string) (identity, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
+		return secret, nil
+	}, jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}))
+	if err != nil || !token.Valid {
+		return identity{}, simpleError("invalid token")
+	}
+	if claims.Sub == "" {
+		return identity{}, simpleError("invalid token")
+	}
+	return identity{userID: claims.Sub, role: claims.Role}, nil
 }
 
 func bearer(c echo.Context) (string, error) {
@@ -163,9 +188,9 @@ func lookupUser(client *http.Client, base, apiKey, token string) (identity, erro
 		return identity{}, simpleError("invalid token")
 	}
 
-	role := metaRole(body.AppMetadata)
+	role := metaRole(body.UserMetadata)
 	if role == "" {
-		role = metaRole(body.UserMetadata)
+		role = metaRole(body.AppMetadata)
 	}
 	return identity{userID: body.ID, role: role}, nil
 }
@@ -201,7 +226,7 @@ func cacheGet(token string) (identity, bool) {
 	if !ok || time.Now().After(entry.exp) {
 		return identity{}, false
 	}
-	return entry.id, true
+	return identity{userID: entry.userID}, true
 }
 
 func cachePut(token string, id identity) {
@@ -215,8 +240,7 @@ func cachePut(token string, id identity) {
 		}
 	}
 	cache[token] = struct {
-		id   identity
-		exp  time.Time
-		last time.Time
-	}{id: id, exp: now.Add(tokenTTL), last: now}
+		userID string
+		exp    time.Time
+	}{userID: id.userID, exp: now.Add(tokenTTL)}
 }

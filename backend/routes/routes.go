@@ -7,9 +7,10 @@ import (
 	"classin/api/config"
 	"classin/api/controllers"
 	apimw "classin/api/middleware"
+	"classin/api/repositories"
 )
 
-func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController, admin *controllers.AdminController, akademik *controllers.AkademikController) {
+func Register(e *echo.Echo, cfg *config.Config, db *repositories.DB, akun *controllers.AkunController, admin *controllers.AdminController, akademik *controllers.AkademikController) {
 	e.Use(apimw.CORS(cfg.AppOrigin))
 	e.Use(apimw.RateLimit())
 	e.Use(middleware.Logger())
@@ -22,13 +23,13 @@ func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController
 	userActionRoles := []string{"super_admin", "tata_usaha", "tu"}
 
 	v1 := e.Group("/api/v1")
-	v1.Use(apimw.Auth())
+	v1.Use(apimw.Auth(db))
 	v1.GET("/me", akun.Me)
 	v1.PUT("/me", akun.UpdateMe)
 	v1.GET("/akademik/bootstrap", akademik.Bootstrap)
 
 	legacy := e.Group("/api")
-	legacy.Use(apimw.Auth())
+	legacy.Use(apimw.Auth(db))
 	legacy.Use(markLegacy)
 	legacy.GET("/me", akun.Me)       // deprecated: alias /api/v1/me
 	legacy.PUT("/me", akun.UpdateMe) // deprecated: alias /api/v1/me

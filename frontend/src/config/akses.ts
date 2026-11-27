@@ -23,12 +23,14 @@ export const DEFAULT_PERMISSIONS: PermissionRow[] = [
   ['Kelola pengguna', false, false, false, false, true],
 ]
 
+// Nilai harus sesuai constraint profiles_role_check di database:
+// super_admin | kepala_sekolah | guru | siswa | wali_kelas
 const ROLE_VALUE: Record<(typeof ROLE_OPTIONS)[number], string> = {
   Siswa: 'siswa',
   'Guru Mapel': 'guru',
-  'Wali Kelas': 'wali',
-  'Kepala Sekolah': 'kepsek',
-  'Tata Usaha': 'tu',
+  'Wali Kelas': 'wali_kelas',
+  'Kepala Sekolah': 'kepala_sekolah',
+  'Tata Usaha': 'super_admin',
 }
 
 export function roleValue(label: string): string {

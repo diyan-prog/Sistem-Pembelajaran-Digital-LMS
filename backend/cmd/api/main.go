@@ -39,7 +39,7 @@ func main() {
 	akademik := controllers.NewAkademikController(services.NewAkademikService(akademikRepo))
 
 	e := echo.New()
-	routes.Register(e, cfg, akun, admin, akademik)
+	routes.Register(e, cfg, db, akun, admin, akademik)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
