@@ -1,28 +1,20 @@
 import { fetchSiswaPengampuGo } from './api-go';
-import { adminList } from '@/services/api-go';
 
+// Ambil pengampu (mapel + guru) untuk siswa tertentu
 export const fetchSiswaClasses = async (siswaId: string) => {
   return fetchSiswaPengampuGo(siswaId);
-};
-
-export const fetchSiswaTugas = async (siswaId: string) => {
-  return adminList<any>('tugas', '');
-};
-
-export const fetchSiswaPresensi = async (siswaId: string) => {
-  return adminList<any>('presensi', '');
 };
 
 // Fetch kelas + pengampu siswa via backend Go (flat list of offerings)
 export const fetchSiswaClassesGo = async (siswaId: string) => {
   const rows = await fetchSiswaPengampuGo(siswaId);
-  return rows.map(p => ({
+  return rows.map((p: any) => ({
     id: p.id_pengampu,
     kelasId: p.id_kelas,
-    subjectId: p.mapel_code,
-    kode: p.mapel_name,
+    subjectId: p.mapel_code || '',
+    kode: p.mapel_name || '',
     guru: p.guru_name || '',
-    co: [],
+    co: [] as string[],
     jadwal: [{ hari: new Date().getDay() || 1, mulai: '07.00', selesai: '08.40', ruang: 'R.501', mode: 'Offline', sesi: 1 }],
     done: 10,
     total: 32,

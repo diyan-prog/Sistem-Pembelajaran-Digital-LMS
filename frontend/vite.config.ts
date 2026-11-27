@@ -6,6 +6,31 @@ import path from 'node:path'
 
 import siteConfiguration from '../.figma/make/site.json'
 
+// SUPABASE_URL dibaca dari backend/.env agar URL project Supabase hanya
+// didefinisikan sekali. Urutan: env shell, backend/.env, .env akar repo.
+const backendEnvFiles = ['../backend/.env', '../.env']
+
+function readBackendSupabaseUrl(): string | undefined {
+  for (const rel of backendEnvFiles) {
+    const file = path.resolve(__dirname, rel)
+    if (!fs.existsSync(file)) continue
+    for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const match = line.match(/^\s*SUPABASE_URL\s*=\s*(.+?)\s*$/)
+      if (match?.[1]) return match[1].replace(/^['"]|['"]$/g, '')
+    }
+  }
+  return undefined
+}
+
+const backendSupabaseUrl = process.env.SUPABASE_URL || readBackendSupabaseUrl()
+if (!backendSupabaseUrl) {
+  console.warn('[vite] SUPABASE_URL tidak ditemukan di backend/.env; VITE_SUPABASE_URL kosong.')
+} else if (!process.env.VITE_SUPABASE_URL) {
+  // Vite membaca process.env untuk variabel berprefix VITE_ saat config
+  // di-resolve (process.env[key] ??= env[key]), jadi nilai ini masuk ke
+  // import.meta.env di dev maupun build tanpa duplikasi di frontend/.env.
+  process.env.VITE_SUPABASE_URL = backendSupabaseUrl
+}
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {

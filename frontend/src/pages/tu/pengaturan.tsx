@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Award, Building2, CalendarDays, ClipboardCheck, Save } from 'lucide-react'
 import { Btn, Card, CardTitle, Dropzone, Field, Input, PageHeader, Progress, Select, Textarea, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { adminList, fetchPengaturanGo, setPengaturanGo } from '@/services/api-go'
+import { adminList, fetchPengaturanGo, setPengaturanGo, type PengaturanGo, type TahunAjaranGo } from '@/services/api-go'
 
 type ProfilSekolah = { ta: string; nama: string; npsn: string; alamat: string; telp: string; min: number }
 type Bobot = { tugas: number; kuis: number; uts: number; uas: number }
@@ -23,15 +23,15 @@ export function PengaturanSistem() {
   const tot = b.tugas + b.kuis + b.uts + b.uas
 
   useEffect(() => {
-    Promise.all([fetchPengaturanGo(), adminList<any>('tahun_ajaran')])
+    Promise.all([fetchPengaturanGo(), adminList<TahunAjaranGo>('tahun_ajaran')])
       .then(([rows, ta]) => {
-        const get = (key: string) => rows.find((r) => r.key === key)?.value
+        const get = (key: string) => rows.find((r: PengaturanGo) => r.key === key)?.value
         const profil = get('profil_sekolah') as Partial<ProfilSekolah> | undefined
         setF({ ...DEFAULT_PROFIL, ...(profil || {}) })
         setB({ ...DEFAULT_BOBOT, ...((get('bobot_nilai') as Partial<Bobot>) || {}) })
         const storedJam = get('jam_pelajaran') as Jam | undefined
         if (Array.isArray(storedJam)) setJam(storedJam)
-        setTahunAjaran(ta.map((x) => `${x.nama} - ${x.semester}`))
+        setTahunAjaran(ta.map((x: TahunAjaranGo) => `${x.nama} - ${x.semester}`))
       })
       .catch(() => {})
   }, [])

@@ -6,8 +6,10 @@
  * Fungsi join kompleks (getSiswaByKelas, createSiswa, createGuru) masih
  * memakai Supabase karena butuh endpoint agregasi backend yang belum tersedia.
  */
-import { supabase } from '@/lib/supabase';
-import { adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo } from './api-go';
+import {
+  adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo,
+  createSiswaGo, updateSiswaGo, createGuruGo, updateGuruGo, deleteUserGo, normalizeStatus,
+} from './api-go';
 import type { Slot } from '@/lib/data';
 
 // ==================== TYPES ====================
@@ -27,10 +29,10 @@ export interface Kelas {
   name: string;
   grade: number;
   major: string;
-  academic_year: string;
+  academic_year: string | null;
   tingkat?: number | null;
   jurusan_id?: string | null;
-  wali_kelas_id?: string;
+  wali_kelas_id?: string | null;
   created_at?: string;
 }
 
@@ -242,66 +244,64 @@ export const updateJurusan = async (id: string, updates: any) =>
 export const deleteJurusan = async (id: string) =>
   adminDelete('jurusan', id);
 
-// TODO: create siswa/guru butuh alur pembuatan profile + siswa/guru atomik.
-// Sementara tetap Supabase sampai endpoint backend tersedia.
-export const createSiswa = async (siswa: any) => {
-  const { data: user, error: e1 } = await supabase.from('profiles').insert({
-    full_name: siswa.nama,
+// ==================== SISWA / GURU ====================
+// Pembuatan akun memakai alur backend: Auth user + profile + baris siswa/guru.
+export const createSiswa = async (siswa: {
+  nama: string;
+  email: string;
+  nis: string;
+  kelasId?: string;
+  status?: string;
+  jenis_kelamin?: string;
+}) => {
+  const res = await createSiswaGo({
+    nama: siswa.nama,
     email: siswa.email,
-    role: 'siswa',
-    status: siswa.status || 'Aktif',
-    nip_nis: siswa.nis
-  }).select().single();
-  if (e1) throw e1;
-
-  const { error: e2 } = await supabase.from('siswa_kelas').insert({
-    id_siswa: user.id,
-    id_kelas: siswa.kelasId,
-    tahun_ajaran: siswa.tahun_ajaran || '2026/2027'
+    nis: siswa.nis,
+    kelas_id: siswa.kelasId,
+    status: normalizeStatus(siswa.status),
+    jenis_kelamin: siswa.jenis_kelamin,
   });
-  if (e2) throw e2;
-
-  return { ...siswa, id: user.id };
+  return { ...siswa, id: res.id };
 };
 
-export const updateSiswa = async (id: string, siswa: any) => {
-  const { error: e1 } = await supabase.from('profiles').update({
-    full_name: siswa.nama,
+export const updateSiswa = async (id: string, siswa: {
+  nama?: string;
+  email?: string;
+  nis?: string;
+  kelasId?: string;
+  status?: string;
+  jenis_kelamin?: string;
+}) => {
+  await updateSiswaGo(id, {
+    nama: siswa.nama,
     email: siswa.email,
-    status: siswa.status,
-    nip_nis: siswa.nis
-  }).eq('id', id);
-  if (e1) throw e1;
-
-  const { error: e2 } = await supabase.from('siswa_kelas').update({
-    id_kelas: siswa.kelasId
-  }).eq('id_siswa', id);
-  if (e2) throw e2;
+    nis: siswa.nis,
+    kelas_id: siswa.kelasId,
+    status: siswa.status ? normalizeStatus(siswa.status) : undefined,
+    jenis_kelamin: siswa.jenis_kelamin,
+  });
 };
 
-export const deleteUser = async (id: string) =>
-  adminDelete('profiles', id);
+export const deleteUser = async (id: string) => deleteUserGo(id);
 
-export const createGuru = async (guru: any) => {
-  const { data, error } = await supabase.from('profiles').insert({
-    full_name: guru.nama,
+export const createGuru = async (guru: { nama: string; email: string; nip?: string; status?: string }) => {
+  const res = await createGuruGo({
+    nama: guru.nama,
     email: guru.email,
-    role: 'guru',
-    status: guru.status || 'Aktif',
-    nip_nis: guru.nip
-  }).select().single();
-  if (error) throw error;
-  return { ...guru, id: data.id };
+    nip: guru.nip,
+    status: normalizeStatus(guru.status),
+  });
+  return { ...guru, id: res.id };
 };
 
-export const updateGuru = async (id: string, guru: any) => {
-  const { error } = await supabase.from('profiles').update({
-    full_name: guru.nama,
+export const updateGuru = async (id: string, guru: { nama?: string; email?: string; nip?: string; status?: string }) => {
+  await updateGuruGo(id, {
+    nama: guru.nama,
     email: guru.email,
-    status: guru.status,
-    nip_nis: guru.nip
-  }).eq('id', id);
-  if (error) throw error;
+    nip: guru.nip,
+    status: guru.status ? normalizeStatus(guru.status) : undefined,
+  });
 };
 
 // Mapping helper for offerings shape

@@ -17,7 +17,15 @@ export function Crud<T extends { id: string }>({ singular, title, subtitle, rows
   useEffect(() => { load() }, [])
 
   const shown = rows.filter((r) => (filterDefs ?? []).every((d) => !flt[d.k] || flt[d.k] === 'Semua' || d.get(r) === flt[d.k]))
-  const open = (r?: T) => { setF(r ? toForm(r) : Object.fromEntries(fields.map((x) => [x.k, x.options ? (typeof x.options[0] === 'string' ? (x.options[0] as string) : (x.options[0] as { v: string }).v) : '']))); setE({}); setModal({ edit: r }) }
+  // Nilai awal form: opsi pertama bila ada. Opsi bisa kosong (mis. daftar kelas
+  // belum selesai dimuat), dan `options[0].v` pada array kosong akan melempar
+  // TypeError saat modal dibuka.
+  const firstOption = (x: F): string => {
+    const o = x.options?.[0]
+    if (o === undefined || o === null) return ''
+    return typeof o === 'string' ? o : String(o.v ?? '')
+  }
+  const open = (r?: T) => { setF(r ? toForm(r) : Object.fromEntries(fields.map((x) => [x.k, firstOption(x)]))); setE({}); setModal({ edit: r }) }
   
   const save = async () => { const x: Record<string, string> = {}; fields.forEach((d) => { const v = (f[d.k] ?? '').trim(); if (d.req && !v) x[d.k] = `${d.l} wajib diisi`; else if (d.validate && v) { const m = d.validate(v, f); if (m) x[d.k] = m } }); setE(x); if (Object.keys(x).length) return
     setBusy(true); try {

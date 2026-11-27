@@ -3,8 +3,7 @@ import { KeyRound, Save, UserPlus } from 'lucide-react'
 import { Btn, Card, DataTable, Input, Modal, NameCell, PageHeader, Select, Tabs, Toggle, useCrumbs, useTab } from '@/components/ui'
 import { DEFAULT_PERMISSIONS, normalizePermissions, ROLE_OPTIONS, ROLE_ORDER, roleLabel, roleValue, type PermissionRow } from '@/config/akses'
 import { useApp } from '@/context'
-import { DEFAULT_PASSWORD, fetchPengaturanGo, setPengaturanGo, userAction } from '@/services/api-go'
-import { fetchUsers } from '@/services/akademik'
+import { DEFAULT_PASSWORD, fetchPengaturanGo, fetchUsersGo, setPengaturanGo, userAction, type PengaturanGo } from '@/services/api-go'
 
 export function ManajemenPengguna() {
   const { toast, confirm } = useApp(); const [tab, setTab] = useTab('pengguna');
@@ -16,7 +15,7 @@ export function ManajemenPengguna() {
   const load = async () => {
     setLoading(true);
     try {
-      const [data, rows] = await Promise.all([fetchUsers(), fetchPengaturanGo()]);
+      const [data, rows] = await Promise.all([fetchUsersGo(), fetchPengaturanGo()]);
       setUsers(data.map((u: any) => ({
         id: u.id,
         nama: u.full_name,
@@ -24,7 +23,7 @@ export function ManajemenPengguna() {
         role: roleLabel(u.role),
         aktif: u.status === 'aktif'
       })));
-      setPerm(normalizePermissions(rows.find((r) => r.key === 'hak_akses')?.value));
+      setPerm(normalizePermissions(rows.find((r: PengaturanGo) => r.key === 'hak_akses')?.value));
     } catch (err: any) {
       toast(err.message, 'err');
     } finally {

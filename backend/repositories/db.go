@@ -3,7 +3,9 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,6 +23,70 @@ func NewDB(dbURL string) (*DB, error) {
 
 func (d *DB) Close() { d.Pool.Close() }
 
+// formatUUID menulis UUID 16 byte menjadi bentuk teks standar.
+func formatUUID(b [16]byte) string {
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// normalizeValue membuat nilai kolom aman di-encode JSON oleh Echo.
+// Tanpa ini UUID tampil sebagai larik byte dan kolom time tampil
+// sebagai objek pgtype.
+func normalizeValue(v interface{}) interface{} {
+	switch t := v.(type) {
+	case [16]byte:
+		return formatUUID(t)
+	case pgtype.UUID:
+		if !t.Valid {
+			return nil
+		}
+		return formatUUID(t.Bytes)
+	case pgtype.Time:
+		if !t.Valid {
+			return nil
+		}
+		us := t.Microseconds
+		return fmt.Sprintf("%02d:%02d:%02d",
+			us/3_600_000_000, (us%3_600_000_000)/60_000_000, (us%60_000_000)/1_000_000)
+	case pgtype.Numeric:
+		if !t.Valid {
+			return nil
+		}
+		f, err := t.Float64Value()
+		if err != nil || !f.Valid {
+			return nil
+		}
+		return f.Float64
+	case pgtype.Date:
+		if !t.Valid {
+			return nil
+		}
+		return t.Time.Format("2006-01-02")
+	case pgtype.Timestamp:
+		if !t.Valid {
+			return nil
+		}
+		return t.Time.UTC()
+	case pgtype.Timestamptz:
+		if !t.Valid {
+			return nil
+		}
+		return t.Time.UTC()
+	case time.Time:
+		return t.UTC()
+	case []byte:
+		return string(t)
+	}
+	return v
+}
+
+func rowMap(fields []string, values []interface{}) map[string]interface{} {
+	row := make(map[string]interface{}, len(fields))
+	for i, name := range fields {
+		row[name] = normalizeValue(values[i])
+	}
+	return row
+}
+
 // List mengembalikan baris dalam bentuk map kolom -> nilai.
 func (d *DB) List(ctx context.Context, query string, args ...interface{}) ([]map[string]interface{}, error) {
 	rows, err := d.Pool.Query(ctx, query, args...)
@@ -36,11 +102,11 @@ func (d *DB) List(ctx context.Context, query string, args ...interface{}) ([]map
 		if err != nil {
 			return nil, err
 		}
-		row := make(map[string]interface{}, len(fields))
+		names := make([]string, len(fields))
 		for i, field := range fields {
-			row[string(field.Name)] = values[i]
+			names[i] = string(field.Name)
 		}
-		result = append(result, row)
+		result = append(result, rowMap(names, values))
 	}
 	return result, rows.Err()
 }
@@ -74,11 +140,11 @@ func (d *DB) One(ctx context.Context, query string, args ...interface{}) (map[st
 	if err != nil {
 		return nil, err
 	}
-	row := make(map[string]interface{}, len(fields))
+	names := make([]string, len(fields))
 	for i, field := range fields {
-		row[string(field.Name)] = values[i]
+		names[i] = string(field.Name)
 	}
-	return row, nil
+	return rowMap(names, values), nil
 }
 
 // nullable mengembalikan nil jika string kosong (untuk kolom NULL).

@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { DataTable, PageHeader, Select, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { fetchKelas, fetchPengampu, fetchUsers, updatePengampu } from '@/services/akademik'
+import { fetchKelasGo, fetchPengampuGo, fetchProfilesGo, updatePengampuGo, type PengampuGo, type ProfilGo, type KelasGo } from '@/services/api-go'
 
 export function PenugasanGuru() {
   const { toast } = useApp();
-  const [offerings, setOfferings] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [classList, setClassList] = useState<any[]>([]);
+  const [offerings, setOfferings] = useState<PengampuGo[]>([]);
+  const [teachers, setTeachers] = useState<ProfilGo[]>([]);
+  const [classList, setClassList] = useState<KelasGo[]>([]);
   const [kl, setKl] = useState('Semua');
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [p, t, k] = await Promise.all([fetchPengampu(), fetchUsers('guru'), fetchKelas()]);
+      const [p, t, k] = await Promise.all([fetchPengampuGo(), fetchProfilesGo('guru'), fetchKelasGo()]);
       setOfferings(p);
       setTeachers(t);
       setClassList(k);
@@ -29,7 +29,7 @@ export function PenugasanGuru() {
 
   const updateAsg = async (id: string, guruId: string) => {
     try {
-      await updatePengampu(id, { id_guru: guruId });
+      await updatePengampuGo(id, { id_guru: guruId });
       setOfferings(offerings.map(o => o.id_pengampu === id ? { ...o, id_guru: guruId } : o));
       toast('Penugasan guru diperbarui');
     } catch (err: any) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { Badge, Btn, Card, DataTable, Input, Modal, PageHeader, Select, StatusBadge, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { adminCreate, adminDelete, adminList, adminUpdate, fetchPengaturanGo, setPengaturanGo } from '@/services/api-go'
+import { adminCreate, adminDelete, adminList, adminUpdate, fetchPengaturanGo, setPengaturanGo, type PengaturanGo } from '@/services/api-go'
 
 interface TahunAjaranGo { id: string; nama: string; semester: string; is_active: boolean | null; created_at: string | null }
 interface Agenda { tgl: string; akhir: string; judul: string; jenis: string }
@@ -24,7 +24,7 @@ export function TahunAjaran() {
     try {
       const [ta, pengaturan] = await Promise.all([adminList<TahunAjaranGo>('tahun_ajaran'), fetchPengaturanGo()])
       setRows(ta || [])
-      const agenda = pengaturan.find((p) => p.key === AGENDA_KEY)?.value
+      const agenda = pengaturan.find((p: PengaturanGo) => p.key === AGENDA_KEY)?.value
       setEv(Array.isArray(agenda) ? agenda as Agenda[] : [])
     } catch (err: any) {
       toast(err.message, 'err')

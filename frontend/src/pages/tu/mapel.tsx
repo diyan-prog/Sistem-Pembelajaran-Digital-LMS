@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui'
-import { createMapel, deleteMapel, fetchMapel, fetchUsers, updateMapel } from '@/services/akademik'
+import { createMapelGo, deleteMapelGo, fetchMapelGo, updateMapelGo, fetchProfilesGo } from '@/services/api-go'
 import { Crud, Det } from './components'
 
 export function DataMapel() {
   const [teachers, setTeachers] = useState<any[]>([])
-  useEffect(() => { fetchUsers('guru').then(setTeachers).catch(() => {}) }, [])
+  useEffect(() => { fetchProfilesGo('guru').then(setTeachers).catch(() => {}) }, [])
   return <Crud singular="Mata Pelajaran" title="Data Mata Pelajaran" subtitle="Kelola mata pelajaran umum dan kejuruan" rows={[]}
-    onFetch={fetchMapel}
-    onCreate={createMapel}
-    onUpdate={updateMapel}
-    onDelete={deleteMapel}
+    onFetch={fetchMapelGo}
+    onCreate={createMapelGo}
+    onUpdate={updateMapelGo}
+    onDelete={deleteMapelGo}
     searchText={(s: any) => s.name + s.code}
     filterDefs={[{ k: 'kel', l: 'Kelompok', options: ['Umum', 'Kejuruan'], get: (s: any) => s.category }]}
     cols={[{ key: 'nama', header: 'Mata Pelajaran', sort: (s: any) => s.name, render: (s: any) => <div className="flex items-center gap-3"><span className="w-3 h-8 rounded-full bg-primary-dark" /><b>{s.name}</b></div> }, { key: 'kode', header: 'Kode', sort: (s: any) => s.code }, { key: 'kelompok', header: 'Kelompok', render: (s: any) => <Badge tone={s.category === 'Umum' ? 'blue' : 'green'}>{s.category}</Badge> }, { key: 'guru', header: 'Guru Utama', render: (s: any) => teachers.find(t => t.id === s.teacher_id)?.full_name || '-' }]}

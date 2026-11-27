@@ -88,7 +88,7 @@ var specs = map[string]resourceSpec{
 		createMsg: "subject created", updateMsg: "subject updated", deleteMsg: "subject deleted",
 	},
 	"siswa": {
-		list:      "SELECT s.id, s.profile_id, s.nis, s.nisn, s.status, s.jenis_kelamin, s.kelas_id, p.nama_lengkap, p.email, p.nip_nis, p.status AS status_profiles FROM siswa s JOIN profiles p ON s.profile_id = p.id",
+		list:      "SELECT s.id, s.profile_id, s.nis, s.nisn, s.status, s.jenis_kelamin, s.kelas_id, p.nama_lengkap AS nama, p.email, p.nip_nis, p.foto_profil, p.status AS status_profiles FROM siswa s JOIN profiles p ON s.profile_id = p.id",
 		filterCol: "s.status",
 		insert:    "INSERT INTO siswa (nis, nisn, kelas_id, jenis_kelamin, status, profile_id) VALUES ($1, $2, $3, $4, $5, $6)",
 		update:    "UPDATE siswa SET nis = $1, nisn = $2, kelas_id = $3, jenis_kelamin = $4, status = $5 WHERE id = $6",
@@ -104,7 +104,7 @@ var specs = map[string]resourceSpec{
 		createMsg: "siswa created", updateMsg: "siswa updated", deleteMsg: "siswa deleted",
 	},
 	"guru": {
-		list:      "SELECT g.id, g.profile_id, g.nip, g.status, p.nama_lengkap, p.email, p.nip_nis, p.status AS status_profiles FROM guru g JOIN profiles p ON g.profile_id = p.id",
+		list:      "SELECT g.id, g.profile_id, g.nip, g.status, p.nama_lengkap AS nama, p.email, p.nip_nis, p.foto_profil, p.status AS status_profiles FROM guru g JOIN profiles p ON g.profile_id = p.id",
 		filterCol: "g.status",
 		insert:    "INSERT INTO guru (nip, profile_id, status) VALUES ($1, $2, $3)",
 		update:    "UPDATE guru SET nip = $1, status = $2 WHERE id = $3",

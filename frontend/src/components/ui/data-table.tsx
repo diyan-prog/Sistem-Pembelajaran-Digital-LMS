@@ -33,13 +33,13 @@ export function DataTable<T extends { id: string | number }>({ rows, cols, searc
             {actions && <th className="w-14" />}
           </tr></thead>
           <tbody>
-            {view.map((r) => (
-              <tr key={r.id} onClick={() => onRow?.(r)} className={cn('h-14 border-t border-line hover:bg-primary-light/50 transition-colors', onRow && 'cursor-pointer', sel.has(r.id) && 'bg-primary-light/60')}>
+            {view.map((r, i) => (
+              <tr key={r.id ?? `row-${i}`} onClick={() => onRow?.(r)} className={cn('h-14 border-t border-line hover:bg-primary-light/50 transition-colors', onRow && 'cursor-pointer', sel.has(r.id) && 'bg-primary-light/60')}>
                 {selectable && <td className="pl-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label="Pilih baris" checked={sel.has(r.id)} onChange={() => { const n = new Set(sel); n.has(r.id) ? n.delete(r.id) : n.add(r.id); setSel(n) }} className="w-4 h-4 accent-[#0B3D5F]" /></td>}
                 {cols.map((c) => <td key={c.key} className={cn('px-4', c.className)}>{c.render ? c.render(r) : String((r as never)[c.key] ?? '')}</td>)}
                 {actions && <td className="pr-3" onClick={(e) => e.stopPropagation()}><RowMenu items={actions(r)} /></td>}
               </tr>))}
-            {view.length === 0 && <tr><td colSpan={cols.length + 2}><Empty title={empty ?? 'Data tidak ditemukan'} text="Coba ubah kata kunci atau filter pencarian." /></td></tr>}
+            {view.length === 0 && <tr key="empty"><td colSpan={cols.length + 2}><Empty title={empty ?? 'Data tidak ditemukan'} text="Coba ubah kata kunci atau filter pencarian." /></td></tr>}
           </tbody>
         </table>
       </div>

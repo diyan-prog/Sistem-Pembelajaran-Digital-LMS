@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, BookOpen, CalendarDays, ClipboardCheck, GraduationCap, Users, School } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Card, CardTitle, PageHeader, Stat } from '@/components/ui'
-import { adminList, fetchSiswaGo } from '@/services/api-go'
-import { fetchSiswaPerJurusan, fetchStats } from '@/services/akademik'
+import { adminList, fetchSiswaGo, fetchStatsGo, fetchSiswaPerJurusanGo } from '@/services/api-go'
 
 interface LogGo { id: string; user: string; aksi: string; waktu: string | null }
 
@@ -19,8 +18,8 @@ export function TUDashboard() {
   const [warn, setWarn] = useState<string[][]>([]);
 
   useEffect(() => {
-    fetchStats().then(setStats).catch(() => {});
-    fetchSiswaPerJurusan().then(setPerJ).catch(() => {});
+    fetchStatsGo().then(setStats).catch(() => {});
+    fetchSiswaPerJurusanGo().then(setPerJ).catch(() => {});
     Promise.all([adminList<any>('classes'), fetchSiswaGo(), adminList<any>('log')])
       .then(([kelas, siswa, log]) => {
         const counts = [10, 11, 12].map((tingkat, i) => ({

@@ -169,18 +169,33 @@ func (r *akunRepo) do(ctx context.Context, method, path string, body interface{}
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var payload struct {
-			Message string `json:"message"`
-			Error   string `json:"error"`
-		}
+		// GoTrue memakai kunci "msg"/"error_description", Kong memakai
+		// "message"; keduanya dipetakan ke models.SupabaseError agar service
+		// bisa membedakan 4xx (kesalahan klien) dari 5xx.
+		// Field `code` bisa berupa angka atau string tergantung endpoint
+		// (GoTrue vs Kong), jadi diparse sebagai map lalu dinormalkan.
+		var payload map[string]interface{}
 		_ = json.Unmarshal(raw, &payload)
-		if payload.Message != "" {
-			return nil, fmt.Errorf("supabase: %s", payload.Message)
+		text := func(keys ...string) string {
+			for _, k := range keys {
+				if v, ok := payload[k].(string); ok && strings.TrimSpace(v) != "" {
+					return v
+				}
+			}
+			return ""
 		}
-		if payload.Error != "" {
-			return nil, fmt.Errorf("supabase: %s", payload.Error)
+		code := text("error_code", "code")
+		if code == "" {
+			if n, ok := payload["code"].(float64); ok {
+				code = fmt.Sprintf("%d", int(n))
+			}
 		}
-		return nil, fmt.Errorf("supabase: status %d", resp.StatusCode)
+		msg := text("message", "msg", "error_description", "error")
+		return nil, &models.SupabaseError{
+			Status:  resp.StatusCode,
+			Code:    code,
+			Message: msg,
+		}
 	}
 	var result map[string]interface{}
 	if len(raw) > 0 {
@@ -190,10 +205,16 @@ func (r *akunRepo) do(ctx context.Context, method, path string, body interface{}
 }
 
 func (r *akunRepo) CreateAuthUser(ctx context.Context, payload models.CreateUserPayload) (map[string]interface{}, error) {
+	// Akun yang dibuat admin harus bisa langsung login; email hanya
+	// dikonfirmasi manual bila klien secara eksplisit meminta false.
+	confirm := true
+	if payload.EmailConfirm != nil {
+		confirm = *payload.EmailConfirm
+	}
 	body := map[string]interface{}{
 		"email":         payload.Email,
 		"password":      payload.Password,
-		"email_confirm": payload.EmailConfirm,
+		"email_confirm": confirm,
 		"user_metadata": payload.UserMetadata,
 	}
 	result, err := r.do(ctx, http.MethodPost, "/auth/v1/admin/users", body)

@@ -70,7 +70,7 @@ type userActionPayload struct {
 	Action       string                 `json:"action"`
 	Email        string                 `json:"email"`
 	Password     string                 `json:"password"`
-	EmailConfirm bool                   `json:"email_confirm"`
+	EmailConfirm *bool                  `json:"email_confirm"`
 	UserMetadata map[string]interface{} `json:"user_metadata"`
 	ID           string                 `json:"id"`
 	Role         string                 `json:"role"`

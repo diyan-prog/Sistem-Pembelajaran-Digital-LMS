@@ -101,12 +101,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [login]);
 
   useEffect(() => {
+    // Sesi tersimpan (localStorage) adalah sumber kebenaran. Bila tidak ada,
+    // peran lama di localStorage harus dibuang supaya RoleGate mengarahkan
+    // pengguna ke halaman login, bukan merender halaman tanpa token.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) handleSession(session);
+      if (session) {
+        handleSession(session);
+        return;
+      }
+      localStorage.removeItem('spd-role');
+      localStorage.removeItem('spd-user');
+      setRole(null);
+      setUserData(null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) handleSession(session);
+      if (event === 'SIGNED_OUT' || !session) {
+        localStorage.removeItem('spd-role');
+        localStorage.removeItem('spd-user');
+        setRole(null);
+        setUserData(null);
+        return;
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        handleSession(session);
+      }
     });
     return () => subscription.unsubscribe();
   }, [handleSession]);
