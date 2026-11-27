@@ -305,21 +305,6 @@ export const updateGuru = async (id: string, guru: any) => {
 };
 
 // Mapping helper for offerings shape
-export const fromPengampuToOffering = (p: Pengampu & { guru?: User; mapel?: Subject; kelas?: Kelas }): any => ({
-  id: p.id_pengampu,
-  kelasId: p.id_kelas,
-  subjectId: p.id_mapel,
-  kode: p.kelas?.name || '',
-  guru: p.id_guru,
-  co: [] as string[],
-  jadwal: [] as any[],
-  done: 0,
-  total: 32,
-  hadir: 0,
-  rata: 0,
-  semester: p.tahun_ajaran || '2026/2027',
-  arsip: false,
-});
 
 export const fetchStats = async () => {
   const d = await adminGet<any>('dashboard').catch(() => null);
