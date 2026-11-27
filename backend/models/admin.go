@@ -127,11 +127,11 @@ type PengaturanPayload struct {
 }
 
 type MateriPayload struct {
-	IdPengampu   string `json:"id_pengampu"`
-	Judul        string `json:"judul"`
-	Deskripsi    string `json:"deskripsi"`
-	FileMateri   string `json:"file_materi"`
-	LinkVideo    string `json:"link_video"`
+	IdPengampu    string `json:"id_pengampu"`
+	Judul         string `json:"judul"`
+	Deskripsi     string `json:"deskripsi"`
+	FileMateri    string `json:"file_materi"`
+	LinkVideo     string `json:"link_video"`
 	TanggalUpload string `json:"tanggal_upload"`
 }
 
