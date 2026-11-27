@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Avatar, Badge, Btn, Card, Chips, Empty, Input, Modal, PageHeader, SearchBar, Select, Textarea, Toggle, useCrumbs } from '@/components/ui'
 import { useApp, useRole } from '@/context'
+import { useData } from '@/lib/data'
 import { supabase } from '@/lib/supabase'
 import { createPengumuman, fetchPengumuman, type Pengumuman } from '@/services/pengumuman'
 
 export function PengumumanList() {
   const { role, cfg } = useRole(); 
+  // Snapshot bootstrap dimuat asinkron; berlangganan agar daftar diambil ulang setelah data tiba.
+  const snap = useData();
   const { toast } = useApp(); 
   const [q, setQ] = useState(''); 
   const [cat, setCat] = useState('Semua'); 
@@ -38,7 +41,7 @@ export function PengumumanList() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [role]);
+  }, [role, snap]);
 
   const [f, setF] = useState({ judul: '', isi: '', kategori: 'Akademik', penting: false }); 
   const [e, setE] = useState<Record<string, string>>({});

@@ -16,7 +16,7 @@ export function Dropzone({ multiple, accept = 'PDF, DOCX, PNG, JPG, ZIP (maks. 2
     <div>
       <div onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files) }} onClick={() => input.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && input.current?.click()}
         className={cn('border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition', drag ? 'border-primary bg-primary-light' : 'border-gray-300 hover:border-primary hover:bg-gray-50')}>
-        <UploadCloud className="mx-auto text-primary" size={32} /><p className="font-bold mt-2 text-sm">Tarik dan lepas berkas di sini</p><p className="text-xs text-muted">atau klik untuk memilih berkas â€¢ {accept}</p>
+        <UploadCloud className="mx-auto text-primary" size={32} /><p className="font-bold mt-2 text-sm">Tarik dan lepas berkas di sini</p><p className="text-xs text-muted">atau klik untuk memilih berkas • {accept}</p>
         <input ref={input} type="file" multiple={multiple} hidden onChange={(e) => add(e.target.files)} />
       </div>
       {files.length > 0 && <ul className="mt-3 space-y-2">{files.map((f, i) => <li key={i} className="flex items-center gap-3 border border-line rounded-xl p-3"><FileText size={20} className="text-accent shrink-0" /><div className="flex-1 min-w-0"><div className="flex justify-between text-sm"><span className="font-semibold truncate">{f.name}</span><span className="text-muted">{f.p >= 100 ? f.size : `${Math.round(f.p)}%`}</span></div><Progress value={f.p} tone={f.p >= 100 ? 'green' : 'blue'} className="mt-1.5" /></div>

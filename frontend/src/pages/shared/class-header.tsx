@@ -11,7 +11,7 @@ export function ClassHeader({ o, mode }: { o: Offering; mode: 'siswa' | 'guru' }
     <Card className="mb-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] leading-9 font-extrabold uppercase">{offeringTitle(o)}</h1><p className="font-semibold mt-1">{jurusanNama(k.jurusan)} â€¢ <span className="italic font-normal text-muted">{o.semester}</span></p>
+          <h1 className="text-[28px] leading-9 font-extrabold uppercase">{offeringTitle(o)}</h1><p className="font-semibold mt-1">{jurusanNama(k.jurusan)} • <span className="italic font-normal text-muted">{o.semester}</span></p>
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm">
             <div className="flex items-center gap-2"><User size={16} className="text-muted" />{g.sapaan}{o.co.length > 0 && <span className="text-accent underline">dan {o.co.length} lainnya</span>}</div>
             <div className="flex items-center gap-2"><MapPin size={16} className="text-muted" />Ruang {slot?.ruang ?? '-'}</div>

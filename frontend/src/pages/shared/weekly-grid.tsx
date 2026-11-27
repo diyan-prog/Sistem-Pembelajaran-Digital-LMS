@@ -15,7 +15,7 @@ export function WeeklyGrid({ blocks }: { blocks: { o: Offering; s: Slot }[] }) {
           {hours.map((h) => <div key={h} className="border-t border-line/70" style={{ height: H }} />)}
           {blocks.filter((b) => b.s.hari === d).map(({ o, s }, i) => { const sub = subjectById(o.subjectId)
             return <button key={i} onClick={() => nav(`${cfg.base}/kelas/${o.id}`)} className="absolute left-1 right-1 rounded-xl p-2 text-left text-white overflow-hidden hover:brightness-95 shadow-soft" style={{ top: (hr(s.mulai) - 7) * H + 1, height: (hr(s.selesai) - hr(s.mulai)) * H - 3, background: sub.warna }}>
-              <div className="text-xs font-extrabold leading-tight">{sub.nama}</div><div className="text-[11px] opacity-90">{o.kode} â€¢ {s.ruang}</div><div className="text-[11px] opacity-90">{s.mulai}-{s.selesai}</div></button> })}</div>)}
+              <div className="text-xs font-extrabold leading-tight">{sub.nama}</div><div className="text-[11px] opacity-90">{o.kode} • {s.ruang}</div><div className="text-[11px] opacity-90">{s.mulai}-{s.selesai}</div></button> })}</div>)}
       </div></div></div>
   )
 }
