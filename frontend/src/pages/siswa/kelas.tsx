@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Megaphone } from 'lucide-react'
 import { Badge, Card, CardTitle, DataTable, Empty, PageHeader, Progress, Ring, StatusBadge, Tabs, useCrumbs, useTab } from '@/components/ui'
-import { ME_SISWA, kuis, materiOf, nilaiSiswa, offeringById, sesiOf, subjectById, teacherById, tugas } from '@/mocks'
+import { kuis, materiOf, meSiswa, nilaiSiswa, offeringById, sesiOf, subjectById, teacherById, tugas } from '@/lib/data'
 import { ClassBrowser, ClassHeader, KuisCard, classAnn } from '@/pages/shared'
 import { MateriList } from './materi'
 import { TugasRow } from './tugas-row'
@@ -15,7 +15,7 @@ export function SiswaKelasSaya() {
 export function KelasDetailSiswa() {
   const { id } = useParams(); const o = offeringById(id!); const [tab, setTab] = useTab('beranda'); const nav = useNavigate()
   const mt = tugas.filter((t) => t.off === o.id); const mk = kuis.filter((k) => k.off === o.id)
-  const sesi = useMemo(() => sesiOf(o.id), [o.id]); const nl = nilaiSiswa(ME_SISWA.id).find((n) => n.off.id === o.id)
+  const sesi = useMemo(() => sesiOf(o.id), [o.id]); const nl = nilaiSiswa(meSiswa().id).find((n) => n.off.id === o.id)
   if (!o) return null
   return (
     <div><PageHeader crumbs={useCrumbs({ l: 'Kelas Saya', to: '/siswa/kelas' }, { l: subjectById(o.subjectId).nama })} title="Halaman Kelas" subtitle="Semua materi, tugas, kuis, kehadiran, dan nilai untuk kelas ini" />

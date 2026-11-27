@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { Badge, Btn, Card, CardTitle, PageHeader, Ring, cn, useCrumbs } from '@/components/ui'
 import { Logo } from '@/components/layouts'
 import { useApp } from '@/context'
-import { fmtBatas, kuisById, kuisSoalOf, offeringById, offeringTitle } from '@/mocks'
+import { fmtBatas, kuisById, kuisSoalOf, offeringById, offeringTitle } from '@/lib/data'
 
 export function KuisInstruksi() {
   const { id } = useParams(); const k = kuisById(id!); const o = offeringById(k.off); const nav = useNavigate(); const can = k.status === 'Tersedia'

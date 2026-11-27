@@ -4,10 +4,9 @@ import { QRCodeSVG } from 'qrcode.react'
 import { ArrowLeft, Calendar, CheckCheck, ClipboardCheck, Clock, Download, FileSpreadsheet, FileText, Info, MapPin, Maximize2, Plus, Printer, QrCode, RefreshCw, Save, X } from 'lucide-react'
 import { Avatar, Badge, Btn, Card, CardTitle, DataTable, NameCell, PageHeader, Progress, Ring, SearchBar, Select, StatusBadge, cn, download, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { TODAY, addDays, fmtTgl, guruOfferings, kelasById, offeringById, offeringTitle, seedStat, sesiOf, studentsOf, subjectById } from '@/mocks'
+import { TODAY, addDays, fmtTgl, kelasById, offeringById, offeringTitle, seedStat, sesiOf, studentsOf, subjectById } from '@/lib/data'
 import { fetchPresensi } from '@/services/presensi'
-import { fromPengampuToOffering } from '@/services/akademik'
-import { useGuruData } from '@/hooks/useGuruData'
+import { mine } from './common'
 
 const usePresensiData = (offId?: string) => {
   const [presensi, setPresensi] = useState<any[]>([]);
@@ -33,13 +32,10 @@ const usePresensiData = (offId?: string) => {
 };
 
 export function PresensiPick() {
-  const { pengampu, loading } = useGuruData();
-  const offs = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
-  
-  if (loading) return <div className="p-8 text-center text-muted">Memuat data kelas...</div>;
+  const offs = mine()
   
   return <div><PageHeader crumbs={useCrumbs({ l: 'Presensi' })} title="Presensi" subtitle="Pilih kelas untuk melihat daftar pertemuan dan mengelola presensi" />
-    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">{offs.map((o) => <Link key={o.id} to={`/guru/presensi/${o.id}`}><Card hover className="h-full"><div className="flex items-center gap-3"><span className="w-12 h-12 rounded-2xl bg-primary-light text-primary-dark flex items-center justify-center"><ClipboardCheck /></span><div><b className="block uppercase leading-snug">{offeringTitle(o)}</b><span className="text-xs text-muted">{kelasById(o.kelasId).nama} â€¢ 25 siswa</span></div></div><div className="mt-4 text-sm flex justify-between"><span className="text-muted">Pertemuan terlaksana</span><b>{o.done} / {o.total}</b></div><Progress value={(o.done / o.total) * 100} tone="green" className="mt-2" /></Card></Link>)}</div></div>
+    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">{offs.map((o) => <Link key={o.id} to={`/guru/presensi/${o.id}`}><Card hover className="h-full"><div className="flex items-center gap-3"><span className="w-12 h-12 rounded-2xl bg-primary-light text-primary-dark flex items-center justify-center"><ClipboardCheck /></span><div><b className="block uppercase leading-snug">{offeringTitle(o)}</b><span className="text-xs text-muted">{kelasById(o.kelasId).nama} • {studentsOf(o.kelasId).length} siswa</span></div></div><div className="mt-4 text-sm flex justify-between"><span className="text-muted">Pertemuan terlaksana</span><b>{o.done} / {o.total}</b></div><Progress value={(o.done / o.total) * 100} tone="green" className="mt-2" /></Card></Link>)}</div></div>
 }
 export function PresensiList() {
   const { offId } = useParams(); const o = offeringById(offId!); const nav = useNavigate(); const { toast } = useApp(); const base = sesiOf(o.id)

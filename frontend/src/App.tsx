@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppProvider, useApp } from '@/context'
+import { useStore } from '@/lib/store'
 import { ROLES } from '@/lib/roles'
 import { RoleGate, SidebarLayout, TopNavLayout } from '@/components/layouts'
 import { PageHeader, useCrumbs } from '@/components/ui'
@@ -83,6 +84,9 @@ const pengumuman = [<Route key="p" path="pengumuman" element={<PengumumanList />
 function Home() { const { role } = useApp(); return <Navigate to={role ? ROLES[role].base + (role === 'tu' ? '/dashboard' : '/beranda') : '/login'} replace /> }
 
 export default function App() {
+  // Berlangganan snapshot: seluruh pohon rute ikut render ulang setelah
+  // data akademik selesai dimuat, sehingga halaman tidak perlu hook tambahan.
+  useStore()
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <RouteLoader />

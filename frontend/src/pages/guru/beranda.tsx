@@ -2,19 +2,23 @@ import { Link } from 'react-router-dom'
 import { ClipboardCheck } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Avatar, Badge, Card, CardTitle } from '@/components/ui'
+import { useRole } from '@/context'
 import { ClassBrowser, ScheduleCard } from '@/pages/shared'
-import { guruOfferings, kelasById, offeringById, offeringTitle, scheduleOf, studentsOf, subSiswa, tugas } from '@/mocks'
+import { TODAY, kelasById, offeringById, offeringTitle, pct, scheduleOf, studentsOf, subSiswa, useData } from '@/lib/data'
 import { mine, myTugas, waiting } from './common'
 
 export function GuruBeranda() {
+  useData()
+  const { cfg } = useRole()
+  const sapaan = cfg?.nama ?? 'Guru'
   const tg = myTugas().filter((t) => t.gStatus !== 'Draft').map((t) => ({ t, n: waiting(t.id) })).filter((x) => x.n > 0)
   const total = tg.reduce((a, b) => a + b.n, 0)
   const feed = myTugas().filter((t) => t.gStatus === 'Aktif').slice(0, 4).flatMap((t) => subSiswa(t.id).filter((s) => s.status !== 'Belum Dikumpulkan').slice(0, 2).map((s) => ({ s, t })))
   const perhatian = mine().flatMap((o) => studentsOf(o.kelasId)).filter((s) => s.risiko).filter((s, i, a) => a.findIndex((x) => x.id === s.id) === i).slice(0, 5)
-  const chart = mine().map((o) => ({ kelas: kelasById(o.kelasId).nama, rata: o.rata, kehadiran: Math.round((o.hadir / o.done) * 100) }))
+  const chart = mine().map((o) => ({ kelas: kelasById(o.kelasId).nama, rata: o.rata, kehadiran: pct(o) }))
   return (
     <div>
-      <div className="mb-6"><h1 className="text-[28px] font-extrabold">Selamat pagi, Bu Sari!</h1><p className="text-muted">Hari ini Anda mengajar {scheduleOf(mine(), 4).length} kelas. Ada {total} pengumpulan menunggu penilaian.</p></div>
+      <div className="mb-6"><h1 className="text-[28px] font-extrabold">Selamat pagi, {sapaan}!</h1><p className="text-muted">Hari ini Anda mengajar {scheduleOf(mine(), TODAY.getDay()).length} kelas. Ada {total} pengumpulan menunggu penilaian.</p></div>
       <div className="grid lg:grid-cols-[380px_1fr] gap-8 items-start">
         <div className="space-y-6"><ScheduleCard offs={mine()} mode="guru" />
           <Card><div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold flex items-center gap-2">Perlu Dinilai<span className="min-w-6 h-6 px-2 rounded-full bg-danger text-white text-xs font-bold flex items-center justify-center">{total}</span></h3><Link to="/guru/penilaian" className="text-sm font-bold text-accent hover:underline">Lihat Semua</Link></div>

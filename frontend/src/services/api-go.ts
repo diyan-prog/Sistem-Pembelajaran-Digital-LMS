@@ -32,6 +32,9 @@ const request = async <T = any>(path: string, options: RequestInit = {}, token?:
   return (body?.data ?? body) as T;
 };
 
+// requestGo membuka pembungkus request untuk service lain.
+export const requestGo = request;
+
 // ==================== HELPER CRUD ADMIN ====================
 // Semua resource admin berada di /admin/{resource} dan butuh role admin/tu/kepsek.
 export const adminList = async <T = any>(resource: string, query = '', token?: string): Promise<T[]> =>

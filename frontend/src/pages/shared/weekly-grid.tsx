@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/components/ui'
 import { useRole } from '@/context'
-import { HARI, TODAY, subjectById, type Offering, type Slot } from '@/mocks'
+import { HARI, TODAY, subjectById, type Offering, type Slot } from '@/lib/data'
 
 const hr = (t: string) => { const [h, m] = t.split('.').map(Number); return h + m / 60 }
 export function WeeklyGrid({ blocks }: { blocks: { o: Offering; s: Slot }[] }) {

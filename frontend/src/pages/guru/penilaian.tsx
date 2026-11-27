@@ -3,18 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import { Check, FileText, Pencil } from 'lucide-react'
 import { Btn, Card, Chips, DataTable, Drawer, Empty, Input, NameCell, PageHeader, Select, StatusBadge, Textarea, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { KATEGORI_KOMENTAR, guruOfferings, kelasById, offeringById, subSiswa, tugas, tugasById, type TStatus } from '@/mocks'
-import { fromPengampuToOffering } from '@/services/akademik'
-import { useGuruData } from '@/hooks/useGuruData'
+import { KATEGORI_KOMENTAR, kelasById, offeringById, subSiswa, tugas, tugasById, type TStatus } from '@/lib/data'
+import { myTugas } from './common'
 
 // ---------- Penilaian ----------
 export function Penilaian() {
-  const [sp, setSp] = useSearchParams(); const { pengampu, tugas: realTugas } = useGuruData();
-  const mineOff = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
-  const mine = realTugas.length > 0
-    ? realTugas.filter((t: any) => t.status !== 'Draft').map((t: any) => ({ ...t, off: t.id_pengampu }))
-    : tugas.filter((t) => mineOff.some((o: any) => o.id === t.off) && t.gStatus !== 'Draft');
-  const tid = sp.get('tugas') ?? (mine.length > 0 ? mine[0].id : tugas[0]?.id ?? '');
+  const [sp, setSp] = useSearchParams()
+  const mine = myTugas().filter((t) => t.gStatus !== 'Draft')
+  const tid = sp.get('tugas') ?? (mine.length > 0 ? mine[0].id : tugas[0]?.id ?? '')
   
   return <PenilaianInner key={tid} tid={tid} mine={mine} setTid={(v) => setSp({ tugas: v })} />
 }

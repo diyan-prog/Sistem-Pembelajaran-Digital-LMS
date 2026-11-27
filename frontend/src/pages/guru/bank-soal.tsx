@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, Eye, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { Badge, Btn, DataTable, Drawer, Input, Modal, PageHeader, Select, Textarea, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { bankSoal, type Soal } from '@/mocks'
+import { bankSoal, type Soal } from '@/lib/data'
 
 export function BankSoal() {
   const { toast, confirm } = useApp(); const [items, setItems] = useState<Soal[]>(bankSoal); const [mp, setMp] = useState('Semua'); const [lv, setLv] = useState('Semua'); const [modal, setModal] = useState<null | { edit?: string }>(null); const [pv, setPv] = useState<Soal | null>(null)

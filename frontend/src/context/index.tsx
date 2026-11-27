@@ -1,9 +1,11 @@
-import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, useEffect, type ReactNode } from 'react'
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react'
-import { notifGuru, notifUmum, notifikasi } from '@/mocks'
+import { notifGuru, notifUmum, notifikasi } from '@/lib/data'
 import { ROLES, resolveRole, toRole, type Role } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
 import { getMeGo } from '@/services/api-go'
+import { loadAkademik } from '@/services/bootstrap'
+import { clearSnapshot, useStore } from '@/lib/store'
 
 type ToastT = { id: number; msg: string; type: 'ok' | 'err' | 'info' | 'warn' }
 type ConfirmT = { title: string; message: string; okLabel?: string; danger?: boolean; onOk: () => void } | null
@@ -17,9 +19,30 @@ type Ctx = {
 }
 const C = createContext<Ctx>(null as never)
 export const useApp = () => useContext(C)
-export const useRole = () => ({ role: useApp().role as Role, cfg: ROLES[useApp().role as Role], userData: useApp().userData })
+export const useRole = () => {
+  const { role, userData } = useApp()
+  const cfg = ROLES[role as Role]
+  const nama = userData?.nama_lengkap ?? userData?.full_name
+  return { role: role as Role, cfg: cfg ? { ...cfg, nama: String(nama ?? cfg.nama) } : cfg, userData }
+}
 
-const notifFor = (r: Role | null) => (r === 'siswa' ? notifikasi : r === 'guru' ? notifGuru : notifUmum).map((n, i) => ({ ...n, read: i > 3 }))
+const fallbackNotif = (r: Role | null) => (r === 'siswa' ? notifikasi : r === 'guru' ? notifGuru : notifUmum).map((n, i) => ({ ...n, read: i > 3 }))
+
+const mapNotif = (rows: Record<string, any>[]) =>
+  rows.map((n) => {
+    const tgl = n.created_at ? new Date(String(n.created_at)) : new Date()
+    const jenis = String(n.jenis ?? 'Info')
+    const j = jenis.toLowerCase()
+    return {
+      id: String(n.id),
+      judul: String(n.judul ?? ''),
+      waktu: tgl.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.'),
+      grup: tgl.toDateString() === new Date().toDateString() ? 'Hari Ini' : 'Sebelumnya',
+      jenis,
+      ikon: j.includes('tugas') ? 'tugas' : j.includes('kuis') ? 'kuis' : j.includes('nilai') ? 'nilai' : j.includes('materi') ? 'materi' : j.includes('presensi') ? 'hadir' : 'info',
+      read: Boolean(n.is_read),
+    }
+  })
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(() => {
@@ -34,14 +57,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
   const [toasts, setToasts] = useState<ToastT[]>([])
   const [conf, setConf] = useState<ConfirmT>(null)
-  const [notifs, setNotifs] = useState(() => notifFor(role))
+  const [notifs, setNotifs] = useState(() => fallbackNotif(role))
+  const snapshot = useStore()
+
+  // Notifikasi asli dari database menggantikan data dummy setelah bootstrap dimuat.
+  useEffect(() => {
+    if (snapshot.notifikasi.length) setNotifs(mapNotif(snapshot.notifikasi))
+  }, [snapshot])
 
   const login = useCallback((r: Role, data: any) => {
     localStorage.setItem('spd-role', r);
     localStorage.setItem('spd-user', JSON.stringify(data));
     setRole(r);
     setUserData(data);
-    setNotifs(notifFor(r));
+    setNotifs(fallbackNotif(r));
   }, [])
 
   const handleSession = useCallback(async (session: any) => {
@@ -56,6 +85,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Jangan menebak role. Halaman login yang menampilkan pesan ke pengguna.
       return;
     }
+    // Muat data akademik ter-scope peran; kegagalan tidak memblokir login.
+    loadAkademik().catch(() => {});
     if (profile) {
       login(r, { ...profile, role: r });
       return;
@@ -80,13 +111,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [handleSession]);
 
-  const logout = () => { localStorage.removeItem('spd-role'); localStorage.removeItem('spd-user'); setRole(null); setUserData(null); supabase.auth.signOut(); }
+  const logout = () => { localStorage.removeItem('spd-role'); localStorage.removeItem('spd-user'); setRole(null); setUserData(null); clearSnapshot(); supabase.auth.signOut(); }
   const refreshUser = useCallback(async () => {
     if (!userData?.id) return;
     try {
       const profile = await getMeGo();
       setUserData(profile);
       localStorage.setItem('spd-user', JSON.stringify(profile));
+      await loadAkademik(true).catch(() => undefined);
     } catch {
       // Biarkan data lokal apa adanya bila backend tidak merespons.
     }

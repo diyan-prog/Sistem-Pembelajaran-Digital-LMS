@@ -1,5 +1,4 @@
 import { BarChart3, BookOpen, CalendarDays, ClipboardCheck, ClipboardList, FileBarChart, Home, Library, LayoutDashboard, Megaphone, School, Users, GraduationCap, Award, Activity, Table2, Database, type LucideIcon } from 'lucide-react'
-import { ME_SISWA } from '@/mocks'
 
 export type Role = 'siswa' | 'guru' | 'wali' | 'kepsek' | 'tu'
 export type Menu = { label: string; icon: LucideIcon; to: string }
@@ -35,7 +34,7 @@ export function resolveRole(profile: unknown, authUser?: unknown): Role | null {
 }
 
 export const ROLES: Record<Role, { label: string; chip: string; base: string; nama: string; sub: string; menus: Menu[] }> = {
-  siswa: { label: 'Siswa', chip: 'SISWA', base: '/siswa', nama: ME_SISWA.nama, sub: 'XI RPL 1', menus: [
+  siswa: { label: 'Siswa', chip: 'SISWA', base: '/siswa', nama: 'Siswa', sub: '', menus: [
     { label: 'Beranda', icon: Home, to: '/siswa/beranda' }, { label: 'Kelas Saya', icon: BookOpen, to: '/siswa/kelas' }, { label: 'Tugas & Kuis', icon: ClipboardList, to: '/siswa/tugas' },
     { label: 'Nilai & Kehadiran', icon: Award, to: '/siswa/nilai' }, { label: 'Pengumuman', icon: Megaphone, to: '/siswa/pengumuman' }] },
   guru: { label: 'Guru', chip: 'GURU', base: '/guru', nama: 'Sari Dewi, S.Kom.', sub: 'Guru Pemrograman Web', menus: [

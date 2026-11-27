@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DataTable, Drawer, NameCell, PageHeader, Progress } from '@/components/ui'
-import { keaktifanGuru, subjectById } from '@/mocks'
+import { keaktifanGuru, subjectById } from '@/lib/data'
 
 export function KepsekGuru() {
   const [d, setD] = useState<string | null>(null); const g = keaktifanGuru.find((x) => x.id === d)

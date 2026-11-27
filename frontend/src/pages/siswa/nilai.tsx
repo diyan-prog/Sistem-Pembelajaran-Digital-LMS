@@ -1,16 +1,18 @@
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Badge, Card, CardTitle, DataTable, PageHeader, Progress, StatusBadge, Tabs, useCrumbs, useTab } from '@/components/ui'
-import { ME_SISWA, absensiSiswa, nilaiSiswa, sesiOf, siswaOfferings, subjectById, trenNilaiBulan } from '@/mocks'
+import { absensiSiswa, meSiswa, myOfferings, nilaiSiswa, sesiOf, subjectById, trenNilaiBulan, useData } from '@/lib/data'
 
 export function NilaiKehadiran() {
-  const [tab, setTab] = useTab('nilai'); const nl = nilaiSiswa(ME_SISWA.id); const ab = absensiSiswa(ME_SISWA.id)
+  useData()
+  const me = meSiswa()
+  const [tab, setTab] = useTab('nilai'); const nl = nilaiSiswa(me.id); const ab = absensiSiswa(me.id)
   const tot = ab.reduce((a, b) => ({ hadir: a.hadir + b.hadir, izin: a.izin + b.izin, sakit: a.sakit + b.sakit, alpa: a.alpa + b.alpa, total: a.total + b.total }), { hadir: 0, izin: 0, sakit: 0, alpa: 0, total: 0 })
   const pie = [{ n: 'Hadir', v: tot.hadir, c: '#0B3D5F' }, { n: 'Izin', v: tot.izin, c: '#2563EB' }, { n: 'Sakit', v: tot.sakit, c: '#F59E0B' }, { n: 'Alpa', v: tot.alpa, c: '#DC2626' }]
-  const riwayat = useMemo(() => siswaOfferings('k2').flatMap((o) => sesiOf(o.id).map((s) => ({ ...s, id: `${o.id}-${s.no}`, mapel: subjectById(o.subjectId).nama }))).sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime()), [])
-  const pers = Math.round((tot.hadir / tot.total) * 100)
+  const riwayat = useMemo(() => myOfferings().flatMap((o) => sesiOf(o.id).map((s) => ({ ...s, id: `${o.id}-${s.no}`, mapel: subjectById(o.subjectId).nama }))).sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime()), [])
+  const pers = tot.total ? Math.round((tot.hadir / tot.total) * 100) : 0
   return (
-    <div><PageHeader crumbs={useCrumbs({ l: 'Nilai & Kehadiran' })} title="Nilai & Kehadiran" subtitle={`${ME_SISWA.nama} â€¢ XI RPL 1 â€¢ Semester Ganjil 2026/2027`} />
+    <div><PageHeader crumbs={useCrumbs({ l: 'Nilai & Kehadiran' })} title="Nilai & Kehadiran" subtitle={`${me.nama} • Semester Ganjil 2026/2027`} />
       <Tabs className="mb-6" tabs={[{ v: 'nilai', l: 'Nilai' }, { v: 'kehadiran', l: 'Kehadiran' }]} value={tab} onChange={setTab} />
       {tab === 'nilai' ? <div className="space-y-6"><DataTable rows={nl.map((n) => ({ ...n, id: n.off.id }))} pageSize={10} cols={[{ key: 'mapel', header: 'Mata Pelajaran', sort: (r) => r.mapel, render: (r) => <b>{r.mapel}</b> }, { key: 'tugas', header: 'Tugas', sort: (r) => r.tugas }, { key: 'kuis', header: 'Kuis', sort: (r) => r.kuis }, { key: 'uts', header: 'UTS', sort: (r) => r.uts }, { key: 'rata', header: 'Rata-rata', sort: (r) => r.rata, render: (r) => <b>{r.rata}</b> }, { key: 'predikat', header: 'Predikat', render: (r) => <Badge tone={r.predikat === 'A' ? 'green' : r.predikat === 'B' ? 'blue' : r.predikat === 'C' ? 'amber' : 'red'}>{r.predikat}</Badge> }]} />
         <Card><CardTitle>Tren Nilai Rata-rata</CardTitle><div style={{ height: 280 }}><ResponsiveContainer><LineChart data={trenNilaiBulan}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="b" tickLine={false} axisLine={false} /><YAxis domain={[60, 100]} tickLine={false} axisLine={false} /><Tooltip /><Legend /><Line type="monotone" dataKey="v" name="Rata-rata Nilai" stroke="#0B3D5F" strokeWidth={3} dot={{ r: 5, fill: '#0B3D5F' }} /></LineChart></ResponsiveContainer></div></Card></div>

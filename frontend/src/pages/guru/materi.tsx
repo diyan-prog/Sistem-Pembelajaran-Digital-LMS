@@ -3,7 +3,7 @@ import { ArrowLeft, Check, Eye, EyeOff, FilePlus, FolderPlus, GripVertical, Penc
 import { Badge, Btn, Dropzone, Field, FileIcon, Input, Modal, PageHeader, Select, Textarea, Toggle, cn, fileTone, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
 import { YtThumb } from '@/pages/shared'
-import { materiOf, offeringById, offeringTitle, subjectById, type Pertemuan } from '@/mocks'
+import { materiOf, offeringById, offeringTitle, subjectById, type Pertemuan } from '@/lib/data'
 
 const ytId = (u: string) => u.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1]
 export function KelolaMateri({ offId, embedded }: { offId: string; embedded?: boolean }) {

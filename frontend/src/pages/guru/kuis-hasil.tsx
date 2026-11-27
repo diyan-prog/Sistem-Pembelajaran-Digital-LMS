@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft, Check, ClipboardCheck, X } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Badge, Btn, Card, CardTitle, DataTable, NameCell, PageHeader, Progress, Stat, StatusBadge, useCrumbs } from '@/components/ui'
-import { kuisById, kuisSoal, offeringById, offeringTitle, studentsOf } from '@/mocks'
+import { kuisById, kuisSoal, offeringById, offeringTitle, studentsOf } from '@/lib/data'
 
 export function KuisHasilGuru() {
   const { id } = useParams(); const k = kuisById(id!); const o = offeringById(k.off); const ss = studentsOf(o.kelasId)

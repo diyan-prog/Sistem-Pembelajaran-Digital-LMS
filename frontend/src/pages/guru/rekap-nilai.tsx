@@ -3,9 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { Check, FileSpreadsheet, X } from 'lucide-react'
 import { Badge, Btn, Card, DataTable, NameCell, PageHeader, Stat, cn, download, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { guruOfferings, nilaiKelas, offeringById, offeringTitle, subjectById } from '@/mocks'
-import { fromPengampuToOffering } from '@/services/akademik'
-import { useGuruData } from '@/hooks/useGuruData'
+import { nilaiKelas, offeringById, offeringTitle, subjectById } from '@/lib/data'
+import { mine } from './common'
 
 export function RekapNilaiKelas() {
   const { offId } = useParams(); const o = offeringById(offId!); const { toast } = useApp(); const rows = nilaiKelas(o.kelasId, o.id)
@@ -17,10 +16,7 @@ export function RekapNilaiKelas() {
   )
 }
 export function RekapNilaiPick() {
-  const { pengampu, loading } = useGuruData();
-  const offs = useMemo(() => pengampu.length > 0 ? pengampu.map(fromPengampuToOffering) : guruOfferings('t1'), [pengampu]);
-  
-  if (loading) return <div className="p-8 text-center text-muted">Memuat data kelas...</div>;
-  
+  const offs = mine()
+
   return <div><PageHeader crumbs={useCrumbs({ l: 'Rekap Nilai' })} title="Rekap Nilai Kelas" subtitle="Pilih kelas" /><div className="grid md:grid-cols-2 gap-5">{offs.map((o) => <Link key={o.id} to={`/guru/rekap-nilai/${o.id}`}><Card hover><b className="uppercase">{offeringTitle(o)}</b><div className="text-sm text-muted mt-1">Rata-rata nilai {o.rata}</div></Card></Link>)}</div></div>
 }

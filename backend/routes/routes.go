@@ -9,7 +9,7 @@ import (
 	apimw "classin/api/middleware"
 )
 
-func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController, admin *controllers.AdminController) {
+func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController, admin *controllers.AdminController, akademik *controllers.AkademikController) {
 	e.Use(apimw.CORS(cfg.AppOrigin))
 	e.Use(apimw.RateLimit())
 	e.Use(middleware.Logger())
@@ -25,6 +25,7 @@ func Register(e *echo.Echo, cfg *config.Config, akun *controllers.AkunController
 	v1.Use(apimw.Auth())
 	v1.GET("/me", akun.Me)
 	v1.PUT("/me", akun.UpdateMe)
+	v1.GET("/akademik/bootstrap", akademik.Bootstrap)
 
 	legacy := e.Group("/api")
 	legacy.Use(apimw.Auth())

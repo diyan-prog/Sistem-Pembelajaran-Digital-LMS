@@ -3,25 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Award, CalendarCheck, Users } from 'lucide-react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Badge, Card, CardTitle, Chips, DataTable, NameCell, PageHeader, Stat, StatusBadge, cn } from '@/components/ui'
-import { bulanHadir, distribusiNilai, studentsOf } from '@/mocks'
-import { KID, statusOf, useWaliData } from './common'
+import { bulanHadir, distribusiNilai, jurusanNama } from '@/lib/data'
+import { statusOf, useWaliData } from './common'
 
 export function WaliBeranda() {
-  const nav = useNavigate(); const { siswa, kelasInfo, loading } = useWaliData(); const [f, setF] = useState('Semua')
-  
-  // Fallback to dummy data
-  const ss = siswa.length > 0 ? siswa : studentsOf(KID);
-  const avgH = Math.round(ss.reduce((a, s) => a + s.hadir, 0) / ss.length); const avgN = Math.round(ss.reduce((a, s) => a + s.rata, 0) / ss.length); const risk = ss.filter((s) => s.risiko).length
+  const nav = useNavigate(); const { siswa: ss, kelasInfo, loading } = useWaliData(); const [f, setF] = useState('Semua')
+
+  const avgH = ss.length ? Math.round(ss.reduce((a, s) => a + s.hadir, 0) / ss.length) : 0
+  const avgN = ss.length ? Math.round(ss.reduce((a, s) => a + s.rata, 0) / ss.length) : 0
+  const risk = ss.filter((s) => s.risiko).length
   const rows = ss.filter((s) => f === 'Semua' || statusOf(s) === f)
-  
+
   if (loading) return <div className="p-8 text-center text-muted">Memuat data wali kelas...</div>;
-  
-  const kelasNama = kelasInfo?.name || 'XI RPL 1';
-  const jurusan = kelasInfo?.major || 'Rekayasa Perangkat Lunak';
+
+  const kelasNama = kelasInfo?.nama || '-';
+  const jurusan = jurusanNama(kelasInfo?.jurusan ?? '') || '-';
   
   return (
-    <div><PageHeader crumbs={[{ l: 'Beranda' }]} title={`Wali Kelas ${kelasNama}`} subtitle={`${jurusan} ΓÇó Semester Ganjil 2026/2027 ΓÇó Mode hanya-lihat`} />
-      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6"><Stat icon={<Users />} label="Jumlah Siswa" value={ss.length} sub="Aktif semua" /><Stat icon={<CalendarCheck />} label="Rata-rata Kehadiran" value={`${avgH}%`} trend="-1,8%" tone="blue" /><Stat icon={<Award />} label="Rata-rata Nilai" value={avgN} trend="+2,1%" /><Stat icon={<AlertTriangle />} label="Siswa Berisiko" value={risk} tone="red" sub="Kehadiran, nilai, atau tugas" /></div>
+    <div><PageHeader crumbs={[{ l: 'Beranda' }]} title={`Wali Kelas ${kelasNama}`} subtitle={`${jurusan} • Mode hanya-lihat`} />
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6"><Stat icon={<Users />} label="Jumlah Siswa" value={ss.length} sub="Aktif semua" /><Stat icon={<CalendarCheck />} label="Rata-rata Kehadiran" value={`${avgH}%`} tone="blue" /><Stat icon={<Award />} label="Rata-rata Nilai" value={avgN} /><Stat icon={<AlertTriangle />} label="Siswa Berisiko" value={risk} tone="red" sub="Kehadiran, nilai, atau tugas" /></div>
       <div className="grid lg:grid-cols-2 gap-6 mb-6"><Card><CardTitle>Kehadiran per Bulan</CardTitle><div style={{ height: 250 }}><ResponsiveContainer><AreaChart data={bulanHadir}><defs><linearGradient id="gh" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0B3D5F" stopOpacity={0.35} /><stop offset="100%" stopColor="#0B3D5F" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="b" tickLine={false} axisLine={false} /><YAxis domain={[60, 100]} tickLine={false} axisLine={false} /><Tooltip /><Area type="monotone" dataKey="v" name="Kehadiran (%)" stroke="#0B3D5F" strokeWidth={3} fill="url(#gh)" /></AreaChart></ResponsiveContainer></div></Card>
         <Card><CardTitle>Distribusi Nilai</CardTitle><div style={{ height: 250 }}><ResponsiveContainer><BarChart data={distribusiNilai}><CartesianGrid vertical={false} stroke="#E5E7EB" /><XAxis dataKey="r" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="v" name="Jumlah Siswa" radius={[10, 10, 0, 0]}>{distribusiNilai.map((_, i) => <Cell key={i} fill={i < 2 ? '#F59E0B' : i % 2 ? '#2563EB' : '#0B3D5F'} />)}</Bar></BarChart></ResponsiveContainer></div></Card></div>
       <h2 className="text-[22px] font-bold mb-3">Daftar Siswa Perwalian</h2>

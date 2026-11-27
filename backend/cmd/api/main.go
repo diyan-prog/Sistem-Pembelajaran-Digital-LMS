@@ -33,11 +33,13 @@ func main() {
 
 	akunRepo := repositories.NewAkunRepository(db, cfg.SupabaseURL, cfg.ServiceRoleKey)
 	adminRepo := repositories.NewAdminRepository(db)
+	akademikRepo := repositories.NewAkademikRepository(db)
 	akun := controllers.NewAkunController(services.NewAkunService(akunRepo))
 	admin := controllers.NewAdminController(services.NewAdminService(adminRepo))
+	akademik := controllers.NewAkademikController(services.NewAkademikService(akademikRepo))
 
 	e := echo.New()
-	routes.Register(e, cfg, akun, admin)
+	routes.Register(e, cfg, akun, admin, akademik)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

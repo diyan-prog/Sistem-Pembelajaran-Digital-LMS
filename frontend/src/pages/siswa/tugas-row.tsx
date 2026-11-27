@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ClipboardList } from 'lucide-react'
 import { StatusBadge, cn } from '@/components/ui'
-import { offeringById, offeringTitle, type Tugas } from '@/mocks'
+import { offeringById, offeringTitle, type Tugas } from '@/lib/data'
 import { shortBatas } from './deadline'
 
 const tugasIcon = (s: string) => s === 'Dinilai' ? 'bg-primary-light text-primary-dark' : s === 'Terlambat' ? 'bg-orange-100 text-orange-700' : s === 'Dikumpulkan' ? 'bg-blue-100 text-accent' : 'bg-gray-100 text-muted'

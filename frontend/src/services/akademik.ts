@@ -8,7 +8,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { adminList, adminCreate, adminUpdate, adminDelete, adminGet, fetchSiswaGo } from './api-go';
-import type { Slot } from '@/mocks';
+import type { Slot } from '@/lib/data';
 
 // ==================== TYPES ====================
 export interface User {

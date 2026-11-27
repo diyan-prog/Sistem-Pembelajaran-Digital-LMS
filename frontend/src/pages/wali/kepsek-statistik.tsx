@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardTitle, DataTable, Drawer, PageHeader, Progress, Tabs, useTab } from '@/components/ui'
-import { kelas, kelasStat, siswaOfferings, subjectById, subjects, teacherById } from '@/mocks'
+import { kelas, kelasStat, siswaOfferings, subjectById, subjects, teacherById } from '@/lib/data'
 
 export function KepsekStatistik() {
   const [tab, setTab] = useTab('kelas'); const [dr, setDr] = useState<string | null>(null)

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Trash2, Upload } from 'lucide-react'
 import { Badge, Btn, Card, Chips, Dropzone, Empty, FileIcon, Modal, PageHeader, SearchBar, cn, fileTone, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { mediaFiles } from '@/mocks'
+import { mediaFiles } from '@/lib/data'
 import { YtThumb } from '@/pages/shared'
 
 export function MediaLibrary() {

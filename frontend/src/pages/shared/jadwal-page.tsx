@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { LayoutGrid, List } from 'lucide-react'
 import { Badge, Card, CardTitle, PageHeader, Segmented, Tabs, useCrumbs, useTab } from '@/components/ui'
 import { useRole } from '@/context'
-import { HARI, TODAY, guruOfferings, kalender, offeringTitle, scheduleOf, siswaOfferings, subjectById } from '@/mocks'
+import { HARI, TODAY, kalender, myOfferings, offeringTitle, scheduleOf, subjectById, useData } from '@/lib/data'
 import { WeeklyGrid } from './weekly-grid'
 
 export function JadwalPage() {
-  const { role } = useRole(); const guru = role === 'guru'; const offs = guru ? guruOfferings('t1') : siswaOfferings('k2')
+  useData()
+  const { role } = useRole(); const guru = role === 'guru'; const offs = myOfferings()
   const [tab, setTab] = useTab('jadwal'); const [view, setView] = useState<'grid' | 'list'>('grid')
   const blocks = offs.flatMap((o) => o.jadwal.map((s) => ({ o, s })))
   const title = guru ? 'Jadwal Mengajar' : 'Jadwal Pelajaran'

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Eye, GripVertical, Library, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { Badge, Btn, Card, CardTitle, DataTable, Empty, Input, Modal, PageHeader, Select, StatusBadge, Textarea, Toggle, cn, useCrumbs } from '@/components/ui'
 import { useApp } from '@/context'
-import { bankSoal, fmtBatas, kuis, kuisSoal, offeringById, offeringTitle } from '@/mocks'
+import { bankSoal, fmtBatas, kuis, kuisSoal, offeringById, offeringTitle } from '@/lib/data'
 import { mine } from './common'
 
 export function KuisListGuru({ offId }: { offId?: string }) {

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Card, Chips, Empty, PageHeader, SearchBar, Select, Tabs, useCrumbs, useTab } from '@/components/ui'
-import { kuis, offeringById, subjectById, tugas } from '@/mocks'
+import { kuis, myTugas, offeringById, subjectById, useData } from '@/lib/data'
 import { KuisCard } from '@/pages/shared'
 import { TugasRow } from './tugas-row'
 
 export function TugasKuisPage() {
+  useData()
   const [tab, setTab] = useTab('tugas'); const [f, setF] = useState('Semua'); const [q, setQ] = useState(''); const [sort, setSort] = useState('Terdekat')
-  const mine = tugas.filter((t) => offeringById(t.off).kelasId === 'k2'); const kz = kuis.filter((k) => offeringById(k.off).kelasId === 'k2')
+  const mine = myTugas(); const kz = kuis
   const st = ['Belum Dikumpulkan', 'Dikumpulkan', 'Terlambat', 'Dinilai']
   const list = mine.filter((t) => (f === 'Semua' || t.status === f) && (t.judul + subjectById(offeringById(t.off).subjectId).nama).toLowerCase().includes(q.toLowerCase())).sort((a, b) => (sort === 'Terdekat' ? 1 : -1) * a.batas.localeCompare(b.batas))
   return (
