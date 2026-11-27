@@ -15,10 +15,20 @@ shadow_port = 54332
 port = 54323
 
 [auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000"]
+site_url = "http://localhost:8443"
+additional_redirect_urls = ["http://localhost:8443"]
 jwt_expiry = 3600
 enable_signup = true
+
+[auth.email]
+otp_length = 6
+
+# Template "Magic Link" dipakai Supabase saat reset kata sandi via OTP.
+# {{ .Token }} mengirim kode 6 digit; tanpa ini Supabase memakai template
+# bawaan yang hanya mengirim tautan masuk.
+[auth.email.template.magic_link]
+subject = "Kode OTP untuk mengatur ulang kata sandi"
+content_path = "./supabase/templates/magic_link.html"
 
 [storage]
 enabled = true
